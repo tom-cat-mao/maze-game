@@ -220,4 +220,16 @@ input {
 .legend li {
     margin-bottom: 5px;
 }
+
+/* Add swatch colors here so the legend can use them */
+.swatch.wall { background-color: #333; }
+.swatch.start { background-color: #4caf50; }
+.swatch.end { background-color: #f44336; }
+.swatch.gold { background-color: #ffeb3b; }
+.swatch.trap { background-color: #ff9800; }
+.swatch.lever { background-color: #03a9f4; }
+.swatch.boss { background-color: #9c27b0; }
+.swatch.path-dp { background-color: rgba(255, 215, 0, 0.5); }
+.swatch.path-greedy { background-color: rgba(30, 144, 255, 0.5); }
+.swatch.path-common { background-color: rgba(124, 252, 0, 0.6); }
 </style>
