@@ -22,7 +22,7 @@ export const useGameStore = defineStore('game', {
     async generateMaze(size) {
       this.isLoading = true;
       this.error = null;
-      this.mazeData = null;
+      this.mazeData = []; // Start with an empty maze for animation
       this.dpPath = null;
       this.greedyPath = null;
       this.playerPosition = null;
@@ -32,34 +32,41 @@ export const useGameStore = defineStore('game', {
       this.puzzleSolution = null;
       this.bossBattleResult = null;
       this.leverPuzzles = {};
-      try {
-        const response = await ApiService.generateMaze(size);
-        this.mazeData = response.data.maze;
-        
-        // Find special tiles and configure them
-        const puzzleTypes = ["prime", "even", "odd"];
-        for (let r = 0; r < this.mazeData.length; r++) {
-          for (let c = 0; c < this.mazeData[r].length; c++) {
-            const cell = this.mazeData[r][c];
-            if (cell === 'S') {
-              this.playerPosition = { r, c };
-              this.playerPath.push([r, c]);
-            } else if (cell === 'L') {
-              // Assign a random puzzle to this lever
-              this.leverPuzzles[`${r},${c}`] = {
-                length: 3,
-                unique: Math.random() > 0.5,
-                type: puzzleTypes[Math.floor(Math.random() * puzzleTypes.length)],
-              };
+
+      const onData = (mazeState) => {
+        this.mazeData = mazeState;
+      };
+
+      const onComplete = () => {
+        if (this.mazeData && this.mazeData.length > 0) {
+            const puzzleTypes = ["prime", "even", "odd"];
+            for (let r = 0; r < this.mazeData.length; r++) {
+                for (let c = 0; c < this.mazeData[r].length; c++) {
+                    const cell = this.mazeData[r][c];
+                    if (cell === 'S') {
+                        this.playerPosition = { r, c };
+                        this.playerPath.push([r, c]);
+                    } else if (cell === 'L') {
+                        this.leverPuzzles[`${r},${c}`] = {
+                            length: 3,
+                            unique: Math.random() > 0.5,
+                            type: puzzleTypes[Math.floor(Math.random() * puzzleTypes.length)],
+                        };
+                    }
+                }
             }
-          }
         }
-      } catch (err) {
+        this.isLoading = false;
+      };
+      
+      const onError = (err) => {
         this.error = 'Failed to generate maze.';
         console.error(err);
-      } finally {
         this.isLoading = false;
-      }
+      };
+
+      // ApiService.generateMaze is now non-blocking and uses callbacks
+      ApiService.generateMaze(size, onData, onComplete, onError);
     },
     async solveDp() {
       if (!this.mazeData) return;

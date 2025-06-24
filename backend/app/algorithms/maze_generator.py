@@ -1,70 +1,99 @@
 import random
+import time
+
+def _recursive_division(maze, r, c, height, width):
+    """
+    Recursively divides a chamber of the maze with a wall and a passage.
+    (r, c) is the top-left corner of the chamber.
+    Yields the maze state at each step.
+    """
+    if width <= 1 or height <= 1:
+        return
+
+    # Determine orientation of the wall to be added
+    if width < height:
+        orientation = 'HORIZONTAL'
+    elif height < width:
+        orientation = 'VERTICAL'
+    else:
+        orientation = random.choice(['HORIZONTAL', 'VERTICAL'])
+
+    if orientation == 'HORIZONTAL':
+        # Row for the wall (must be an even index)
+        wall_r = r + random.randrange(1, height, 2)
+        # Column for the passage (must be an odd index to be a path)
+        passage_c = c + random.randrange(0, width, 2)
+
+        for i in range(c, c + width):
+            maze[wall_r][i] = '#'
+            yield maze
+        maze[wall_r][passage_c] = '.'
+        yield maze
+
+        # Recurse on the two new sub-chambers
+        yield from _recursive_division(maze, r, c, wall_r - r, width)
+        yield from _recursive_division(maze, wall_r + 1, c, r + height - (wall_r + 1), width)
+
+    else:  # VERTICAL
+        # Column for the wall (must be an even index)
+        wall_c = c + random.randrange(1, width, 2)
+        # Row for the passage (must be an odd index to be a path)
+        passage_r = r + random.randrange(0, height, 2)
+
+        for i in range(r, r + height):
+            maze[i][wall_c] = '#'
+            yield maze
+        maze[passage_r][wall_c] = '.'
+        yield maze
+
+        # Recurse on the two new sub-chambers
+        yield from _recursive_division(maze, r, c, height, wall_c - c)
+        yield from _recursive_division(maze, r, wall_c + 1, height, c + width - (wall_c + 1))
+
 
 def generate_maze(width, height):
     """
-    Generates a perfect maze using Prim's algorithm, ensuring a single
-    path exists between any two cells.
+    Generates a maze using the Recursive Division algorithm.
     '#' = wall, '.' = path
     """
     if width < 5 or height < 5:
         raise ValueError("Maze dimensions must be at least 5x5.")
-    
-    # Initialize maze with walls
-    maze = [['#' for _ in range(width)] for _ in range(height)]
-    
-    # Pick a random starting cell
-    start_x, start_y = random.randint(1, width - 2), random.randint(1, height - 2)
-    maze[start_y][start_x] = '.'
-    
-    # A 'frontier' is a list of walls adjacent to visited cells.
-    frontiers = []
-    for x, y in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-        nx, ny = start_x + x, start_y + y
-        if 1 <= nx < width - 1 and 1 <= ny < height - 1:
-            frontiers.append((nx, ny))
 
-    while frontiers:
-        # Pick a random wall from the list
-        wall_x, wall_y = random.choice(frontiers)
-        frontiers.remove((wall_x, wall_y))
-        
-        # Find the cell this wall divides
-        neighbors = []
-        if wall_x > 1 and maze[wall_y][wall_x - 1] == '.':
-            neighbors.append((wall_x + 1, wall_y))
-        if wall_x < width - 2 and maze[wall_y][wall_x + 1] == '.':
-            neighbors.append((wall_x - 1, wall_y))
-        if wall_y > 1 and maze[wall_y - 1][wall_x] == '.':
-            neighbors.append((wall_x, wall_y + 1))
-        if wall_y < height - 2 and maze[wall_y + 1][wall_x] == '.':
-            neighbors.append((wall_x, wall_y - 1))
+    # The recursive division algorithm works best with odd dimensions
+    if width % 2 == 0:
+        width += 1
+    if height % 2 == 0:
+        height += 1
+    
+    # Initialize maze with open paths
+    maze = [['.' for _ in range(width)] for _ in range(height)]
+    yield maze
 
-        if len(neighbors) == 1:
-            # This wall divides a visited cell from an unvisited one.
-            # Carve a path through the wall.
-            maze[wall_y][wall_x] = '.'
-            
-            # Add the new cell's frontiers to the list
-            new_cell_x, new_cell_y = neighbors[0]
-            if 1 <= new_cell_x < width - 1 and 1 <= new_cell_y < height - 1:
-                maze[new_cell_y][new_cell_x] = '.'
-                for x, y in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-                    nx, ny = new_cell_x + x, new_cell_y + y
-                    if 1 <= nx < width - 1 and 1 <= ny < height - 1 and maze[ny][nx] == '#':
-                        if (nx, ny) not in frontiers:
-                            frontiers.append((nx, ny))
+    # Add boundary walls
+    for c in range(width):
+        maze[0][c] = '#'
+        maze[height - 1][c] = '#'
+    for r in range(height):
+        maze[r][0] = '#'
+        maze[r][width - 1] = '#'
+    yield maze
+
+    # Start recursive division on the inner grid
+    yield from _recursive_division(maze, 1, 1, height - 2, width - 2)
 
     # Place Start and End points
     maze[1][1] = 'S'
     maze[height - 2][width - 2] = 'E'
+    yield maze
 
     # Place other elements
     place_elements(maze, width, height)
+    yield maze
 
     # Break some walls to create loops, making the maze non-perfect
     break_walls(maze, width, height, percentage=0.1) # Break 10% of internal walls
+    yield maze
 
-    return maze
 
 def break_walls(maze, width, height, percentage=0.1):
     """
@@ -128,3 +157,14 @@ def place_elements(maze, width, height):
         if not path_cells: break
         r, c = path_cells.pop()
         maze[r][c] = 'B'
+
+
+if __name__ == "__main__":
+    width, height = 15, 15  # Example dimensions
+    maze_generator = generate_maze(width, height)
+    
+    for maze in maze_generator:
+        for row in maze:
+            print(''.join(row))
+        time.sleep(0.5)  # Adjust the speed of generation here
+        print("\n" + "="*40 + "\n")  # Separator between steps

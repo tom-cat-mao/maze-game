@@ -1,6 +1,9 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+import json
+import asyncio
 from app.models.pydantic_models import (
-    MazeGenerationRequest, MazeSchema, PathfindingRequest, PathfindingResponse,
+    MazeGenerationRequest, PathfindingRequest, PathfindingResponse,
     PuzzleRequest, PuzzleResponse, BossBattleRequest, BossBattleResponse
 )
 from app.algorithms.maze_generator import generate_maze as maze_gen_algo
@@ -11,13 +14,18 @@ from app.algorithms.boss_battle import solve_boss_battle
 
 router = APIRouter()
 
-@router.post("/maze/generate", response_model=MazeSchema)
-def generate_maze_endpoint(request: MazeGenerationRequest):
+@router.post("/maze/generate")
+async def generate_maze_endpoint(request: MazeGenerationRequest):
     """
-    Generates a new maze based on the provided size.
+    Generates a new maze based on the provided size, streaming the generation process.
     """
-    maze = maze_gen_algo(request.size, request.size)
-    return {"maze": maze}
+    async def event_stream():
+        maze_generator = maze_gen_algo(request.size, request.size)
+        for maze_state in maze_generator:
+            yield f"data: {json.dumps({'maze': maze_state})}\n\n"
+            await asyncio.sleep(0.02)
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 @router.post("/solve/dp", response_model=PathfindingResponse)
