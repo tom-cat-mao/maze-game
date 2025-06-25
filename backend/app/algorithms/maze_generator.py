@@ -134,8 +134,17 @@ class Locker:
 
 class BossGroup:
     def __init__(self):
-        
+        self.bosses_number = random.randint(1, 10)
+        self.bosses = []
+        self._add_boss()
 
+    def _add_boss(self):
+        """
+        Adds bosses to the group. e.g. [blood1, blood2, blood3, ...]
+        """
+        for _ in range(self.bosses_number):
+            blood = random.randint(1, 100)
+            self.bosses.append(blood)
 
 class Maze:
     def __init__(self, width, height):
@@ -255,8 +264,10 @@ class Maze:
         if num_bosses > 0:
             # Find the empty cell around the end point
             r, c = self.unique_path[-2]  # Get the second last cell in the unique path
+            path_cells.remove((r, c))  # Remove it from path cells
             self.maze[r][c] = 'B'
-            self.bosses[(r, c)] = "Boss"
+            self.bosses_group = BossGroup()
+            self.bosses[(r, c)] = self.bosses_group
 
         # Place Gold, Traps, Levers
         # Set gold
