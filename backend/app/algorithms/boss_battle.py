@@ -11,7 +11,7 @@ def solve_boss_battle(boss_hp, skills, turn_limit=20):
         return (hp / max_damage_per_turn) if max_damage_per_turn > 0 else float('inf')
 
     # State: (f_cost, g_cost, hp, cooldowns_tuple, path_list)
-    # g_cost is the number of turns taken so far.
+    # g_cost is the number of turns taken so far. f_cost is the estimated total cost.
     # cooldowns are stored as a tuple to be hashable for the visited set.
     initial_cooldowns = tuple([0] * len(skills))
     

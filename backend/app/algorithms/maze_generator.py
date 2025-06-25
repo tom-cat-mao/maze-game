@@ -1,170 +1,358 @@
 import random
 import time
+import hashlib
 
-def _recursive_division(maze, r, c, height, width):
-    """
-    Recursively divides a chamber of the maze with a wall and a passage.
-    (r, c) is the top-left corner of the chamber.
-    Yields the maze state at each step.
-    """
-    if width <= 1 or height <= 1:
-        return
-
-    # Determine orientation of the wall to be added
-    if width < height:
-        orientation = 'HORIZONTAL'
-    elif height < width:
-        orientation = 'VERTICAL'
-    else:
-        orientation = random.choice(['HORIZONTAL', 'VERTICAL'])
-
-    if orientation == 'HORIZONTAL':
-        # Row for the wall (must be an even index)
-        wall_r = r + random.randrange(1, height, 2)
-        # Column for the passage (must be an odd index to be a path)
-        passage_c = c + random.randrange(0, width, 2)
-
-        for i in range(c, c + width):
-            maze[wall_r][i] = '#'
-            yield maze
-        maze[wall_r][passage_c] = '.'
-        yield maze
-
-        # Recurse on the two new sub-chambers
-        yield from _recursive_division(maze, r, c, wall_r - r, width)
-        yield from _recursive_division(maze, wall_r + 1, c, r + height - (wall_r + 1), width)
-
-    else:  # VERTICAL
-        # Column for the wall (must be an even index)
-        wall_c = c + random.randrange(1, width, 2)
-        # Row for the passage (must be an odd index to be a path)
-        passage_r = r + random.randrange(0, height, 2)
-
-        for i in range(r, r + height):
-            maze[i][wall_c] = '#'
-            yield maze
-        maze[passage_r][wall_c] = '.'
-        yield maze
-
-        # Recurse on the two new sub-chambers
-        yield from _recursive_division(maze, r, c, height, wall_c - c)
-        yield from _recursive_division(maze, r, wall_c + 1, height, c + width - (wall_c + 1))
-
-
-def generate_maze(width, height):
-    """
-    Generates a maze using the Recursive Division algorithm.
-    '#' = wall, '.' = path
-    """
-    if width < 5 or height < 5:
-        raise ValueError("Maze dimensions must be at least 5x5.")
-
-    # The recursive division algorithm works best with odd dimensions
-    if width % 2 == 0:
-        width += 1
-    if height % 2 == 0:
-        height += 1
+class PasswordLock:
+    def __init__(self):
+        self.salt = b'\xb2S"e}\xdf\xb0\xfe\x9c\xde\xde\xfe\xf3\x1d\xdc>'
     
-    # Initialize maze with open paths
-    maze = [['.' for _ in range(width)] for _ in range(height)]
-    yield maze
-
-    # Add boundary walls
-    for c in range(width):
-        maze[0][c] = '#'
-        maze[height - 1][c] = '#'
-    for r in range(height):
-        maze[r][0] = '#'
-        maze[r][width - 1] = '#'
-    yield maze
-
-    # Start recursive division on the inner grid
-    yield from _recursive_division(maze, 1, 1, height - 2, width - 2)
-
-    # Place Start and End points
-    maze[1][1] = 'S'
-    maze[height - 2][width - 2] = 'E'
-    yield maze
-
-    # Place other elements
-    place_elements(maze, width, height)
-    yield maze
-
-    # Break some walls to create loops, making the maze non-perfect
-    break_walls(maze, width, height, percentage=0.1) # Break 10% of internal walls
-    yield maze
-
-
-def break_walls(maze, width, height, percentage=0.1):
-    """
-    Randomly removes a certain percentage of internal walls to create loops.
-    """
-    internal_walls = []
-    for r in range(1, height - 1):
-        for c in range(1, width - 1):
-            if maze[r][c] == '#':
-                # Ensure it's an internal wall, not a border that could be part of the generation logic
-                if (maze[r-1][c] == '.' and maze[r+1][c] == '.') or \
-                   (maze[r][c-1] == '.' and maze[r][c+1] == '.'):
-                    internal_walls.append((r, c))
+    def hash_password(self, password):            
+        # 将密码转换为字节流
+        password_bytes = password.encode('utf-8')
+        
+        # 将盐值和密码组合并进行哈希
+        hash_obj = hashlib.sha256(self.salt + password_bytes)
+        password_hash = hash_obj.hexdigest()
+        
+        return password_hash
     
-    num_to_break = int(len(internal_walls) * percentage)
-    random.shuffle(internal_walls)
-    
-    for i in range(num_to_break):
-        if not internal_walls: break
-        r, c = internal_walls.pop()
-        maze[r][c] = '.'
+    def verify_password(self, input_password, stored_hash):
+        # 使用相同的盐值对输入密码进行哈希
+        calculated_hash = self.hash_password(input_password)
+        
+        # 比较计算出的哈希值与存储的哈希值
+        return calculated_hash == stored_hash
 
-def place_elements(maze, width, height):
-    """Randomly places Gold, Traps, etc. on path cells."""
-    path_cells = []
-    for r in range(height):
+class Clues:
+    def __init__(self, clue):
+        self.clues = []
+        self._add_clue(clue)
+
+    def _add_clue(self, clues):
+        """
+        Adds a clue to the list of clues.
+        """
+        length = len(clues)
+        num_clue = random.randint(1, 3)
+        for _ in range(num_clue):
+            try:
+                # Clues = [[], [], []]
+                clue = clues[random.randint(0, length - 1)]
+            except IndexError:
+                # If the list is empty, skip adding a clue
+                return
+            # Append the clue to the list
+            self.clues.append(clue)
+
+    def get_clues(self):
+        return self.clues
+
+class Locker:
+    def __init__(self, locker_id, is_locked=True):
+        self.password_lock = PasswordLock()
+        self.locker_id = locker_id
+        self.tips = []
+        self.password = self._set_password(locker_id)
+        self.password_hash = self.password_lock.hash_password(''.join(map(str, self.password)))
+        # The locker can be locked or unlocked
+        self.clue = Clues(self.tips)
+        self.is_locked = is_locked
+        self.reward = self._get_reward(locker_id)
+
+    def _get_reward(self, locker_id):
+        """
+        Determines the reward for unlocking the locker.
+        """
+        return random.randint(1, 100)
+
+    def _set_password(self, locker_id):
+        """
+        Sets a 3-digit password for the locker.
+        - The password is prime numbers or others between 0 and 9.
+        - The password's first digit is even or odd.
+        - The each digit is unique or not.
+        """
+        prime_numbers = [2, 3, 5, 7]
+        even_numbers = [0, 2, 4, 6, 8]
+        odd_numbers = [1, 3, 5, 7, 9]
+
+        password = []
+        for _ in range(3):
+            digit = random.randint(0, 9)
+            password.append(digit)
+        
+        prime_flag = True
+        unique_flag = True
+
+        # Check password uniqueness
+        if len(set(password)) != len(password):
+            unique_flag = False
+
+        for digit in password:
+            if digit not in prime_numbers:
+                prime_flag = False
+            if digit in even_numbers:
+                # Tips for even digit, e.g. [position, 0]
+                self.tips.append([password.index(digit), 0])
+            if digit in odd_numbers:
+                # Tips for odd digit, e.g. [position, 1]
+                self.tips.append([password.index(digit), 1])
+            
+            mask = [-1, -1, -1]
+            digit_index = password.index(digit)
+            mask[digit_index] = digit
+            self.tips.append(mask)
+
+        if prime_flag:
+            self.tips.append([-1,-1])   
+
+        return password
+
+    def get_tips(self):
+        """
+        Returns tips about the locker password.
+        """
+        return self.tips
+
+    def toggle_lock(self):
+        self.is_locked = not self.is_locked
+
+    def check_password(self, password):
+        """
+        Checks if the provided password matches the locker password.
+        Returns True if it matches, False otherwise.
+        """
+        if self.is_locked:
+            hashed_input = self.password_lock.hash_password(''.join(map(str, password)))
+            return hashed_input == self.password_hash
+        else:
+            # If the locker is not locked, any password is accepted
+            return True
+
+    def __repr__(self):
+        return f"Locker({self.locker_id}, {'Locked' if self.is_locked else 'Unlocked'})"
+
+class BossGroup:
+    def __init__(self):
+        
+
+
+class Maze:
+    def __init__(self, width, height):
+        """ Initializes a maze with given width and height.
+        The maze is represented as a grid of characters.
+        '.' represents a path, '#' represents a wall.
+        """
+        if width < 7 or height < 7:
+            raise ValueError("Maze dimensions must be at least 7x7.")
+        if width % 2 == 0:
+            width += 1
+        if height % 2 == 0:
+            height += 1
+
+        self.width = width
+        self.height = height
+        self.locker_id = set()
+        self.lockers = {}
+        self.bosses = {}
+        self.maze = []
+        self.unique_path = []
+        self.unique = False
+
+    def _recursive_division(self, r, c, height, width):
+        """
+        Recursively divides a chamber of the maze with a wall and a passage.
+        (r, c) is the top-left corner of the chamber.
+        """
+        if width <= 1 or height <= 1:
+            return
+
+        # Determine orientation of the wall to be added
+        if width < height:
+            orientation = 'HORIZONTAL'
+        elif height < width:
+            orientation = 'VERTICAL'
+        else:
+            orientation = random.choice(['HORIZONTAL', 'VERTICAL'])
+
+        if orientation == 'HORIZONTAL':
+            # Row for the wall (must be an even index)
+            wall_r = r + random.randrange(1, height, 2)
+            # Column for the passage (must be an odd index to be a path)
+            passage_c = c + random.randrange(0, width, 2)
+
+            for i in range(c, c + width):
+                self.maze[wall_r][i] = '#'
+            self.maze[wall_r][passage_c] = '.'
+
+            # Recurse on the two new sub-chambers
+            self._recursive_division(r, c, wall_r - r, width)
+            self._recursive_division(wall_r + 1, c, r + height - (wall_r + 1), width)
+
+        else:  # VERTICAL
+            # Column for the wall (must be an even index)
+            wall_c = c + random.randrange(1, width, 2)
+            # Row for the passage (must be an odd index to be a path)
+            passage_r = r + random.randrange(0, height, 2)
+
+            for i in range(r, r + height):
+                self.maze[i][wall_c] = '#'
+            self.maze[passage_r][wall_c] = '.'
+
+            # Recurse on the two new sub-chambers
+            self._recursive_division(r, c, height, wall_c - c)
+            self._recursive_division(r, wall_c + 1, height, c + width - (wall_c + 1))
+
+
+    def generate_maze(self):
+        """
+        Generates a maze using the Recursive Division algorithm.
+        '#' = wall, '.' = path
+        """
+        width = self.width
+        height = self.height
+        # Initialize maze with open paths
+        self.maze = [['.' for _ in range(width)] for _ in range(height)]
+
+        # Add boundary walls
         for c in range(width):
-            # Exclude start and end positions from item placement
-            if maze[r][c] == '.':
-                path_cells.append((r, c))
-    
-    random.shuffle(path_cells)
+            self.maze[0][c] = '#'
+            self.maze[height - 1][c] = '#'
+        for r in range(height):
+            self.maze[r][0] = '#'
+            self.maze[r][width - 1] = '#'
 
-    # Define proportions based on available path cells
-    num_gold = int(len(path_cells) * 0.1)
-    num_traps = int(len(path_cells) * 0.05)
-    
-    if width <= 10:
-        num_levers = 2
+        # Start recursive division on the inner grid
+        self._recursive_division(1, 1, height - 2, width - 2)
+
+        # Place Start and End points
+        self.maze[1][1] = 'S'
+        self.maze[height - 2][width - 2] = 'E'
+
+
+    def place_elements(self):
+        """Randomly places Gold, Traps, etc. on path cells."""
+        path_cells = []
+        for r in range(self.height):
+            for c in range(self.width):
+                # Exclude start and end positions from item placement
+                if self.maze[r][c] == '.':
+                    path_cells.append((r, c))
+        
+        random.shuffle(path_cells)
+
+        # Define proportions based on available path cells
+        num_gold = int(len(path_cells) * 0.1)
+        num_traps = int(len(path_cells) * 0.05)
+
         num_bosses = 1
-    else:
-        num_levers = 3
-        num_bosses = 2
+        if self.width <= 10:
+            num_levers = 2
+        else:
+            num_levers = 3
+        
+        # Set the boss in final position
+        if num_bosses > 0:
+            # Find the empty cell around the end point
+            r, c = self.unique_path[-2]  # Get the second last cell in the unique path
+            self.maze[r][c] = 'B'
+            self.bosses[(r, c)] = "Boss"
 
-    for _ in range(num_gold):
-        if not path_cells: break
-        r, c = path_cells.pop()
-        maze[r][c] = 'G'
+        # Place Gold, Traps, Levers
+        # Set gold
+        for _ in range(num_gold):
+            if not path_cells: break
+            r, c = path_cells.pop()
+            self.maze[r][c] = 'G'
 
-    for _ in range(num_traps):
-        if not path_cells: break
-        r, c = path_cells.pop()
-        maze[r][c] = 'T'
+        # Set traps
+        for _ in range(num_traps):
+            if not path_cells: break
+            r, c = path_cells.pop()
+            self.maze[r][c] = 'T'
 
-    for _ in range(num_levers):
-        if not path_cells: break
-        r, c = path_cells.pop()
-        maze[r][c] = 'L'
+        # Set levers
+        for _ in range(num_levers):
+            if not path_cells: break
+            r, c = path_cells.pop()
+            self.maze[r][c] = 'L'
+            if not self.locker_id:
+                locker_id = 1
+            else:
+                locker_id = max(self.locker_id) + 1
+            self.locker_id.add(locker_id)
+            locker = Locker(locker_id)
+            self.lockers[(r, c)] = locker
+        
+    def unique_path_checker(self):
+        """
+        Check if the maze has a unique path from start to end using DFS.
+        If a unique path is found, it is stored in self.unique_path.
+        """
+        self.unique_path = []
+        start = (1, 1)
+        end = (self.height - 2, self.width - 2)
+        
+        stack = [(start, [start])]  # Stack stores tuples of (current_node, path_to_current_node)
+        paths_found = []
 
-    for _ in range(num_bosses):
-        if not path_cells: break
-        r, c = path_cells.pop()
-        maze[r][c] = 'B'
+        while stack:
+            current, path = stack.pop()
+
+            if current == end:
+                paths_found.append(path)
+                # If we find more than one path, we can stop early.
+                if len(paths_found) > 1:
+                    self.unique_path = []
+                    return False
+                continue
+
+            r, c = current
+            for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nr, nc = r + dr, c + dc
+                neighbor = (nr, nc)
+
+                # A valid move is within bounds, not a wall, and not creating a cycle.
+                if 0 <= nr < self.height and 0 <= nc < self.width and \
+                   self.maze[nr][nc] != '#' and neighbor not in path:
+                    new_path = list(path)
+                    new_path.append(neighbor)
+                    stack.append((neighbor, new_path))
+
+        if len(paths_found) == 1:
+            self.unique_path = paths_found[0]
+            return True
+
+        return False
 
 
 if __name__ == "__main__":
     width, height = 15, 15  # Example dimensions
-    maze_generator = generate_maze(width, height)
-    
-    for maze in maze_generator:
-        for row in maze:
-            print(''.join(row))
-        time.sleep(0.5)  # Adjust the speed of generation here
-        print("\n" + "="*40 + "\n")  # Separator between steps
+    maze_obj = Maze(width, height)
+
+    # 1. Generate the maze structure.
+    maze_obj.generate_maze()
+
+    # 2. Check for a unique path now that the maze is generated.
+    maze_obj.unique = maze_obj.unique_path_checker()
+
+    if maze_obj.unique:
+        print("The maze has a unique path from start to end.")
+        # 3. Place elements since a unique path exists.
+        maze_obj.place_elements()
+        print("Elements placed in the maze.")
+    else:
+        print("The maze does not have a unique path from start to end.")
+
+    # Print the final maze for visualization
+    for row in maze_obj.maze:
+        print(''.join(row))
+    print("\n" + "="*40 + "\n")
+
+    # Print unique path if it exists
+    if maze_obj.unique:
+        print("Unique path from start to end:", maze_obj.unique_path)
+
+    # Check the lockers and their tips
+    for locker_pos, locker in maze_obj.lockers.items():
+        print(f"Locker at {locker_pos}, ID: {locker.locker_id}, Tips: {locker.get_tips()}, Clues: {locker.clue.get_clues()}")

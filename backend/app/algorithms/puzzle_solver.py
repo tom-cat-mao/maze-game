@@ -45,3 +45,12 @@ def solve_puzzle(constraints):
 
     backtrack([])
     return solution
+
+if __name__ == "__main__":
+    constraints = {
+        "length": 3,
+        "unique": True,
+        "type": "prime"
+    }
+    solution = solve_puzzle(constraints)
+    print("Solution:", solution)

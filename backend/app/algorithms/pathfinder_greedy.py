@@ -55,3 +55,27 @@ def find_pos(maze, char):
             if val == char:
                 return (r, c)
     return None
+
+
+if __name__ == "__main__":
+    maze = [
+        "###############",
+        "#SG.#L#...#.#.#",
+        "#L###.#.#.#.#.#",
+        "#.......#G..TB#",
+        "#.#############",
+        "#.#.T.#.......#",
+        "#.#.#.#####.###",
+        "#.#.#.G.#.#.#.#",
+        "#.#G###.#.#.#B#",
+        "#.#...#......G#",
+        "#.#.#G#######.#",
+        "#T#.#.#...#.G.#",
+        "#.###.#G###.#L#",
+        "#.G..T#.....#E#",
+        "###############"
+    ]
+    
+    path, total_value = solve_with_greedy(maze)
+    print("Path:", path)
+    print("Total Value:", total_value)
