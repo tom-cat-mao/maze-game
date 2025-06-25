@@ -261,10 +261,11 @@ class Maze:
             num_levers = 3
         
         # Set the boss in final position
-        if num_bosses > 0:
+        if num_bosses > 0 and self.unique_path:
             # Find the empty cell around the end point
             r, c = self.unique_path[-2]  # Get the second last cell in the unique path
-            path_cells.remove((r, c))  # Remove it from path cells
+            if (r, c) in path_cells:
+                path_cells.remove((r, c))  # Remove it from path cells
             self.maze[r][c] = 'B'
             self.bosses_group = BossGroup()
             self.bosses[(r, c)] = self.bosses_group
@@ -336,6 +337,25 @@ class Maze:
 
         return False
 
+
+def generate_maze(width, height):
+    """
+    A standalone generator function that creates a maze, ensures it has a
+    unique path, places elements, and yields the maze state at key steps.
+    This function is intended to be imported and used by the API endpoint.
+    """
+    while True:
+        maze_obj = Maze(width, height)
+        maze_obj.generate_maze()
+        # Yield the maze after the basic structure is generated
+        yield maze_obj.maze
+        
+        if maze_obj.unique_path_checker():
+            # Yield the maze with a guaranteed unique path
+            maze_obj.place_elements()
+            # Yield the final maze with all elements placed
+            yield maze_obj.maze
+            break # Exit the loop once a valid maze is created
 
 if __name__ == "__main__":
     width, height = 15, 15  # Example dimensions
