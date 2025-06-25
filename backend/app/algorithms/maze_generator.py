@@ -366,4 +366,4 @@ if __name__ == "__main__":
 
     # Check the lockers and their tips
     for locker_pos, locker in maze_obj.lockers.items():
-        print(f"Locker at {locker_pos}, ID: {locker.locker_id}, Tips: {locker.get_tips()}, Clues: {locker.clue.get_clues()}")
+        print(f"Locker at {locker_pos}, ID: {locker.locker_id}, Password: {locker.password}, Tips: {locker.get_tips()}, Clues: {locker.clue.get_clues()}")
