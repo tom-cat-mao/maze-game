@@ -1,6 +1,7 @@
 import random
 import time
 import hashlib
+import json
 
 class PasswordLock:
     def __init__(self):
@@ -337,6 +338,30 @@ class Maze:
 
         return False
 
+def json_saver(maze_obj):
+    """
+    Saves the maze object to a JSON file.
+    """
+    """
+    json style:
+    {
+        "width": 15,
+        "height": 15,
+        "maze": [
+            ["#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#"],
+            ["#", "S", ".", ".", "#", "L", "#", ".", ".", "#", ".", "#", ".", "#", ".", "#", "."],
+            ["#", "L", "#", "#", "#", ".", "#", ".", "#", "." ... ]}"""
+
+    path_file = "file_path"
+    maze_data = {
+        "width": maze_obj.width,
+        "height": maze_obj.height,
+        "maze": maze_obj.maze,
+    }
+
+    with open(path_file, 'w') as f:
+        json.dump(maze_data, f, indent=4)
+    print(f"Maze data saved to {path_file}")
 
 def generate_maze(width, height):
     """
@@ -386,4 +411,7 @@ if __name__ == "__main__":
 
     # Check the lockers and their tips
     for locker_pos, locker in maze_obj.lockers.items():
-        print(f"Locker at {locker_pos}, ID: {locker.locker_id}, Tips: {locker.get_tips()}, Clues: {locker.clue.get_clues()}")
+        print(f"Locker at {locker_pos}, ID: {locker.locker_id}, Password: {locker.password}, Tips: {locker.get_tips()}, Clues: {locker.clue.get_clues()}")
+
+    json_saver(maze_obj)
+    # print(f"Maze data saved to {path_file}")
