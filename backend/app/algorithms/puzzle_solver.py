@@ -1,3 +1,6 @@
+import json
+from maze_generator import PasswordLock
+
 def solve_puzzle(password, constraints):
     """
     Inputs: password: list of three digits representing the password. (Used for verification in tests).
@@ -7,6 +10,7 @@ def solve_puzzle(password, constraints):
              tries: int representing the number of tries taken to find the solution.
     Solves a puzzle with given constraints using backtracking with pruning.
     """
+    password_locker = PasswordLock()
     primes = [2, 3, 5, 7]
     evens = [0, 2, 4, 6, 8]
     odds = [1, 3, 5, 7, 9]
@@ -32,8 +36,8 @@ def solve_puzzle(password, constraints):
             # Constraint: Digit at a position is even (0) or odd (1)
             elif len(c) == 2 and c[1] in [0, 1]:
                 pos, val = c
-                if p[pos] is not None:
-                    is_even = p[pos] in evens
+                if p[pos-1] is not None:
+                    is_even = p[pos-1] in evens
                     if val == 0 and not is_even: return False
                     if val == 1 and is_even: return False
             # Constraint: A specific digit is at a specific position (mask)
@@ -52,8 +56,10 @@ def solve_puzzle(password, constraints):
         # Base case: a full, valid password has been constructed.
         if position == 3:
             tries_count[0] += 1
+            # Convert the list of digits to a string before verification.
+            password_str = "".join(map(str, current_password))
             # Check if the found password is the one we are looking for.
-            if current_password == password:
+            if password_locker.verify_password(password_str, password):
                 nonlocal solution
                 solution = list(current_password)
                 return True  # Correct solution found, stop searching.
@@ -74,32 +80,32 @@ def solve_puzzle(password, constraints):
     
     return solution, tries_count[0]
 
+def json_loader(json_file):
+    """
+    Converts a JSON file to a Python object.
+    Args:
+        json_file (str): Path to the JSON file to be converted.
+    Returns:
+        tuple: A tuple containing the constraints and the password.
+    Example: password = "hash", constraints = [[-1, -1], [0, 0], [1, 1], [2, -1, -1], [-1, 2, -1], [-1, -1, 5]]
+    """
+    with open(json_file, 'r') as f:
+        data = json.load(f)
+        constraints = data.get("C", [])
+        password = data.get("L", "")
+        password = str(password)
+        return constraints, password
+
+
 if __name__ == "__main__":
-    # Example 1: All digits are prime, first digit is 2.
-    true_password_1 = [2, 5, 7] 
-    constraints_1 = [[-1, -1], [2, -1, -1]]
-    solution_1, tries_1 = solve_puzzle(true_password_1, constraints_1)
-    print(f"--- Puzzle 1 ---")
-    print(f"Constraints: {constraints_1}")
-    print(f"Found solution: {solution_1} in {tries_1} tries.")
-    print(f"Correct password was: {true_password_1}")
-    print(f"Solution is correct: {solution_1 == true_password_1}\n")
+    json_file = 'file_path'  # Replace with your JSON file path
+    constraints, password = json_loader(json_file)
+    # print(f"password: {password}")
+    # print(f"password type: {type(password)}")
+    solution, tries = solve_puzzle(password, constraints)
+    
+    print(f"Solution: {solution}")
+    print(f"Tries: {tries}")
 
-    # Example 2: First digit is odd, second is even, third is 9.
-    true_password_2 = [3, 2, 9]
-    constraints_2 = [[0, 1], [1, 0], [-1, -1, 9]]
-    solution_2, tries_2 = solve_puzzle(true_password_2, constraints_2)
-    print(f"--- Puzzle 2 ---")
-    print(f"Constraints: {constraints_2}")
-    print(f"Found solution: {solution_2} in {tries_2} tries.")
-    print(f"Correct password was: {true_password_2}")
-    print(f"Solution is correct: {solution_2 == true_password_2}\n")
-
-    # Example 3: No solution possible (digit 1 is both even and odd)
-    # true_password_3 = None
-    # constraints_3 = [[1, 0], [1, 1]]
-    # solution_3, tries_3 = solve_puzzle(true_password_3, constraints_3)
-    # print(f"--- Puzzle 3 (No Solution) ---")
-    # print(f"Constraints: {constraints_3}")
-    # print(f"Found solution: {solution_3} in {tries_3} tries.")
-    # print(f"Correctly found no solution: {solution_3 == []}\n")
+# Example usage:
+# python puzzle_solver.py path/to/your/json_file.json

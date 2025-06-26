@@ -1,5 +1,6 @@
 import heapq
 import math
+import json
 
 class State:
     """
@@ -140,7 +141,7 @@ def solve_boss_battle(bosses_list, skills_list, turn_limit=20):
                 # Apply skill damage and set its cooldown
                 new_boss_hp = current_state.boss_hp - harm
                 new_cooldowns[skill_idx] = cooldown
-                new_path = current_state.path + [(current_state.time_elapsed, harm)]
+                new_path = current_state.path + [(current_state.time_elapsed, skill_idx)]
                 
                 new_boss_index = current_state.boss_index
                 
@@ -166,12 +167,42 @@ def solve_boss_battle(bosses_list, skills_list, turn_limit=20):
                     heapq.heappush(priority_queue, (next_lower_bound, next_state))
 
     return min_completion_time, best_path
-    
-if __name__ == "__main__": 
-    skills = [[10, 5], [5, 4], [3, 10]]  # [harm, cooldown]
-    bosses = [20, 15, 10]
+
+def json_loader(json_file):
+    """
+    Converts a JSON file to a Python object.
+    Args:
+        json_file (str): Path to the JSON file to be converted.
+    Returns:
+        tuple: A tuple containing the constraints and the password.
+    Example: password = [2, 0, 5], constraints = [[-1, -1], [0, 0], [1, 1], [2, -1, -1], [-1, 2, -1], [-1, -1, 5]]
+    """
+    """
+    json style:
+    {
+  "B": [11, 13, 8, 17],
+  "PlayerSkills": [
+    [6, 2],
+    [2, 0],
+    [4, 1]
+  ],
+  "min_turns": 13,
+  "actions": [0, 2, 1, 2, 0, 2, 1, 0, 1, 2, 0, 1, 2]
+}
+    """
+    with open(json_file, 'r') as file:
+        data = json.load(file)
+    bosses = data["B"]
+    skills = data["PlayerSkills"]
+
+    return bosses, skills
+
+if __name__ == "__main__":
+    json_file = "file_path"
+    bosses, skills = json_loader(json_file)
     min_time, path = solve_boss_battle(bosses, skills)
     print(f"Minimum time to defeat all bosses: {min_time}")
     print("Optimal skill usage path:")
-    for time, harm in path:
-        print(f"At time {time}: use skill {harm}")
+    # print(f"actions: {path}")
+    for time, skill_idx in path:
+        print(f"At time {time}: use skill {skill_idx}")
