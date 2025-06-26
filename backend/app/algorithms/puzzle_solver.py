@@ -1,5 +1,5 @@
 import json
-from maze_generator import PasswordLock
+from app.algorithms.maze_generator import PasswordLock
 
 def solve_puzzle(password, constraints):
     """

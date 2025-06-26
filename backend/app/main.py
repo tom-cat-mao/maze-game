@@ -10,6 +10,7 @@ app.include_router(v1_endpoints.router, prefix="/api/v1", tags=["v1"])
 origins = [
     "http://localhost:5173", # Allow requests from the Vue development server
     "http://127.0.0.1:5173",
+    "*",
 ]
 
 app.add_middleware(
