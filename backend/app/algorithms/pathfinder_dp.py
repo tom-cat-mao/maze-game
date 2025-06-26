@@ -1,182 +1,188 @@
 import logging
 from collections import deque
 
+# --- Constants ---
+SCORE_MAP = {'G': 10, 'T': -5, 'S': 0, 'E': 0, '.': 0, 'B':0, 'L':0}
+MOVE_COST = 0 # As per user request, movement has no cost.
+
 # --- Logging Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def solve_with_dp(maze):
     """
-    Finds the path with the maximum possible reward from 'S' to 'E' using
-    State Compression Dynamic Programming. The end node 'E' is treated as the
-    final destination and not as an intermediate step.
+    Solves the maze using a Tree-based Dynamic Programming approach.
+    The maze is treated as a tree structure with a main path (S to E) and side branches.
+    The algorithm finds the path with the maximum possible score.
     """
-    logging.info("DP solver started: Refactored Logic")
     height = len(maze)
     width = len(maze[0])
-    value_map = {'G': 10, 'T': -5}
 
-    # --- 1. Identify critical points (S, G, T) and End Point (E) ---
-    start_pos = find_pos(maze, 'S')
-    end_pos = find_pos(maze, 'E')
-
-    if not start_pos or not end_pos:
-        logging.error("Start or End node not found in maze.")
-        return [], 0
-
-    # Critical points for DP now only include S, G, and T
-    critical_points = [{'id': 0, 'pos': start_pos, 'char': 'S'}]
-    pos_to_id = {start_pos: 0}
+    # 1. Pre-processing: Build graph and find main path
+    graph = _build_graph(maze, height, width)
+    start_node = _find_char(maze, 'S')
+    end_node = _find_char(maze, 'E')
     
+    main_path = _find_shortest_path_bfs(graph, start_node, end_node)
+    if not main_path:
+        logging.warning("No path found from S to E.")
+        return [], 0
+        
+    main_path_set = set(main_path)
+    
+    # Memoization tables for DP
+    memo_away = {}
+    memo_to_e = {}
+    # Memoization for path reconstruction
+    path_decision_memo = {}
+
+    # 2. Core DP Calculation (from E back to S)
+    # We build the to_E DP values iteratively from E backwards along the main path.
+    for i in range(len(main_path) - 1, -1, -1):
+        current_node = main_path[i]
+        
+        # The parent in the context of "towards E" tree is the next node on the main path
+        parent_on_main_path = main_path[i + 1] if i + 1 < len(main_path) else None
+        
+        _calculate_dp_values(current_node, parent_on_main_path, graph, main_path_set, memo_away, path_decision_memo, maze)
+
+        # Now calculate dp_to_e for the current node
+        side_branch_profit = 0
+        # The children of current_node for the to_E calculation are its neighbors
+        # that are NOT on the main path towards E or S.
+        children_of_main_node = [
+            n for n in graph[current_node] 
+            if n != parent_on_main_path and (i > 0 and n != main_path[i-1])
+        ]
+
+        for neighbor in children_of_main_node:
+            if neighbor in memo_away and memo_away[neighbor] > 0:
+                side_branch_profit += memo_away[neighbor]
+
+        # Get score from the next node on the main path
+        next_node_score = memo_to_e.get(parent_on_main_path, 0)
+        
+        current_score = SCORE_MAP.get(maze[current_node[0]][current_node[1]], 0)
+        
+        memo_to_e[current_node] = current_score + side_branch_profit + next_node_score
+
+    # 3. Path Reconstruction
+    logging.info(f"Path Decision Memo: {path_decision_memo}")
+    final_path = _reconstruct_path(start_node, main_path, graph, path_decision_memo)
+    max_score = memo_to_e.get(start_node, 0)
+
+    return final_path, max_score
+
+
+def _calculate_dp_values(u, parent, graph, main_path_set, memo_away, path_decision_memo, maze):
+    """
+    Recursively calculates dp_away for a node u and its descendants using memoization.
+    This explores a branch off the main path.
+    """
+    if u in memo_away:
+        return
+
+    path_decision_memo[u] = {}
+    # Recursive step: calculate for all children first
+    children = [v for v in graph[u] if v != parent]
+    for v in children:
+        # A child on a side-branch cannot be on the main path
+        if v in main_path_set: continue
+        _calculate_dp_values(v, u, graph, main_path_set, memo_away, path_decision_memo, maze)
+
+    # Calculate dp_away[u] using children's values (0/1 Knapsack logic)
+    away_profit_from_children = 0
+    for v in children:
+        if v in main_path_set: continue
+        # With no move cost, we take any branch with positive returns.
+        if v in memo_away and memo_away[v] > 0:
+            away_profit_from_children += memo_away[v]
+            path_decision_memo[u][v] = True
+        else:
+            path_decision_memo[u][v] = False
+
+
+    u_char = maze[u[0]][u[1]]
+    memo_away[u] = SCORE_MAP.get(u_char, 0) + away_profit_from_children
+
+
+def _reconstruct_path(start_node, main_path, graph, path_decision_memo):
+    """
+    Reconstructs the final path by walking the main path and dispatching
+    to explore profitable side branches based on the decisions made during DP.
+    """
+    final_path = []
+    main_path_set = set(main_path)
+
+    for i in range(len(main_path)):
+        current_node = main_path[i]
+        final_path.append(current_node)
+
+        # The decisions for branches off the main path are stored in the DP calculation
+        # for the main path nodes themselves.
+        decisions = path_decision_memo.get(current_node, {})
+        logging.info(f"Reconstructing at {current_node}, decisions: {decisions}")
+        for neighbor, should_explore in decisions.items():
+            if should_explore:
+                logging.info(f"  -> Exploring branch at {neighbor}")
+                # This neighbor is the root of a profitable side branch.
+                branch_excursion = _build_branch_excursion(neighbor, current_node, graph, path_decision_memo)
+                final_path.extend(branch_excursion)
+                final_path.append(current_node) # Return to the main path node
+
+    return final_path
+
+def _build_branch_excursion(u, parent, graph, path_decision_memo):
+    """
+    Recursively builds the path for an excursion into a side branch.
+    """
+    path = [u]
+    decisions = path_decision_memo.get(u, {})
+    for v, should_explore in decisions.items():
+        if should_explore:
+            sub_branch_path = _build_branch_excursion(v, u, graph, path_decision_memo)
+            path.extend(sub_branch_path)
+            path.append(u) # Backtrack to u
+    return path
+
+
+def _build_graph(maze, height, width):
+    """Builds a graph representation of the maze."""
+    graph = {}
     for r in range(height):
         for c in range(width):
-            if maze[r][c] in value_map:
-                node_id = len(critical_points)
-                critical_points.append({'id': node_id, 'pos': (r, c), 'char': maze[r][c]})
-                pos_to_id[(r, c)] = node_id
-    
-    k = len(critical_points)
-    logging.info(f"Found {k} critical points (S, G, T). End point E is separate.")
-    
-    # If only S exists, just find a direct path to E
-    if k <= 1:
-        _, path = _find_path_bfs(maze, start_pos, end_pos)
-        return (path, 0) if path else ([], 0)
+            if maze[r][c] != '#':
+                node = (r, c)
+                neighbors = []
+                for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < height and 0 <= nc < width and maze[nr][nc] != '#':
+                        neighbors.append((nr, nc))
+                graph[node] = neighbors
+    return graph
 
-    # --- 2. Pre-calculate paths ---
-    all_critical_pos = {p['pos'] for p in critical_points}
 
-    # a) Between all pairs of critical points (S, G, T)
-    costs = [[None] * k for _ in range(k)]
-    for i in range(k):
-        for j in range(k):
-            if i == j: continue
-            # Path should not go through other critical points or the end point
-            start_pos_i = critical_points[i]['pos']
-            end_pos_j = critical_points[j]['pos']
-            avoid_points = (all_critical_pos - {start_pos_i, end_pos_j}) | {end_pos}
-            _, path = _find_path_bfs(maze, start_pos_i, end_pos_j, avoid_points=avoid_points)
-            costs[i][j] = path
-    
-    # b) From each critical point to the end point 'E'
-    costs_to_end = [None] * k
-    for i in range(k):
-        # Path should not go through other critical points
-        start_pos_i = critical_points[i]['pos']
-        avoid_points = all_critical_pos - {start_pos_i}
-        _, path = _find_path_bfs(maze, start_pos_i, end_pos, avoid_points=avoid_points)
-        costs_to_end[i] = path
-
-    logging.info("Finished pre-calculating costs.")
-
-    # --- 3. Initialize DP table ---
-    dp = [[float('-inf')] * k for _ in range(1 << k)]
-    parent = [[None] * k for _ in range(1 << k)]
-    dp[1][0] = 0  # Mask for S (id 0) is 1, reward is 0
-
-    # --- 4. State Compression DP main loop (only on S, G, T) ---
-    logging.info("Starting State Compression DP main loop.")
-    for mask in range(1, 1 << k):
-        for i in range(k):
-            if not ((mask >> i) & 1): continue
-            if dp[mask][i] == float('-inf'): continue
-            
-            for j in range(k):
-                if not ((mask >> j) & 1): # If j is not visited
-                    if costs[i][j]: # And a path from i to j exists
-                        new_mask = mask | (1 << j)
-                        reward = value_map.get(critical_points[j]['char'], 0)
-                        new_reward = dp[mask][i] + reward
-                        
-                        if new_reward > dp[new_mask][j]:
-                            dp[new_mask][j] = new_reward
-                            parent[new_mask][j] = i
-    
-    # --- 5. Find the best final path to E ---
-    max_reward = float('-inf')
-    final_mask = -1
-    last_node_idx = -1
-
-    # Check every state (mask, i) and see what the total reward would be if we go to E from there
-    for mask in range(1, 1 << k):
-        for i in range(k):
-            # If state is reachable and there's a path from i to E
-            if dp[mask][i] > float('-inf') and costs_to_end[i]:
-                # Total reward is the reward accumulated so far
-                current_reward = dp[mask][i]
-                if current_reward > max_reward:
-                    max_reward = current_reward
-                    final_mask = mask
-                    last_node_idx = i
-
-    # If no path to E could be constructed
-    if last_node_idx == -1:
-        _, path = _find_path_bfs(maze, start_pos, end_pos)
-        return (path, 0) if path else ([], 0)
-
-    # --- 6. Reconstruct the path ---
-    # a) Backtrack from the last node to Start
-    path_segment_to_last_node = []
-    path_nodes = []
-    curr_mask = final_mask
-    curr_node_idx = last_node_idx
-
-    while curr_node_idx is not None:
-        path_nodes.append(curr_node_idx)
-        prev_node_idx = parent[curr_mask][curr_node_idx]
-        if prev_node_idx is None:
-            break
-        curr_mask &= ~(1 << curr_node_idx)
-        curr_node_idx = prev_node_idx
-    
-    path_nodes.reverse()
-
-    # b) Stitch together the path from S to the last node
-    for i in range(len(path_nodes) - 1):
-        start_node_id = path_nodes[i]
-        end_node_id_segment = path_nodes[i+1]
-        segment = costs[start_node_id][end_node_id_segment]
-        if not path_segment_to_last_node:
-            path_segment_to_last_node.extend(segment)
-        else:
-            path_segment_to_last_node.extend(segment[1:])
-
-    # c) Append the final leg from the last node to E
-    final_leg_to_end = costs_to_end[last_node_idx]
-    if not path_segment_to_last_node: # Case where S is the last_node
-         final_path = final_leg_to_end
-    else:
-         final_path = path_segment_to_last_node + final_leg_to_end[1:]
-
-    return final_path, max_reward
-
-def _find_path_bfs(maze, start, end, avoid_points=None):
-    """
-    Finds the shortest path between two points using BFS, avoiding a given set of points.
-    """
-    if not start or not end: return float('-inf'), []
-    
-    q = deque([(start, [start])])
-    visited = {start}
-    if avoid_points:
-        visited.update(avoid_points)
-
-    while q:
-        (r, c), path = q.popleft()
-        if (r, c) == end:
-            return 0, path
-        
-        for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < len(maze) and 0 <= nc < len(maze[0]) and \
-               maze[nr][nc] != '#' and (nr, nc) not in visited:
-                visited.add((nr, nc))
-                q.append(((nr, nc), path + [(nr, nc)]))
-                
-    return float('-inf'), []
-
-def find_pos(maze, char):
+def _find_char(maze, char):
+    """Finds the first occurrence of a character in the maze."""
     for r, row in enumerate(maze):
         for c, val in enumerate(row):
             if val == char:
                 return (r, c)
+    return None
+
+def _find_shortest_path_bfs(graph, start, end):
+    """Finds the shortest path between two nodes in a graph using BFS."""
+    if start not in graph or end not in graph:
+        return None
+    queue = deque([(start, [start])])
+    visited = {start}
+    while queue:
+        current, path = queue.popleft()
+        if current == end:
+            return path
+        for neighbor in graph[current]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                new_path = list(path)
+                new_path.append(neighbor)
+                queue.append((neighbor, new_path))
     return None
