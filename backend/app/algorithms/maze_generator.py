@@ -168,6 +168,21 @@ class Maze:
         self.maze = []
         self.unique_path = []
         self.unique = False
+        self.player_skills = self._set_player_skills()
+
+    def _set_player_skills(self):
+        """
+        Sets the player's skills for the maze game.
+        Skills are represented as a list of tuples (damage, cooldown).
+        """
+        skill_number = random.randint(1, 10)
+        skills = []
+        skills.append([3, 0])  # Add a default skill with no damage and no cooldown
+        for _ in range(skill_number):
+            damage = random.randint(1, 50)
+            cooldown = random.randint(1, 5)
+            skills.append([damage, cooldown])
+        return skills
 
     def _recursive_division(self, r, c, height, width):
         """
@@ -235,9 +250,9 @@ class Maze:
         # Start recursive division on the inner grid
         self._recursive_division(1, 1, height - 2, width - 2)
 
-        # Place Start and End points
-        self.maze[1][1] = 'S'
-        self.maze[height - 2][width - 2] = 'E'
+        # Place Start and End points random on the maze wall
+        self.maze[random.randint(1, height - 2)][0] = 'S'
+        self.maze[random.randint(1, height - 2)][width - 1] = 'E'
 
 
     def place_elements(self):
@@ -296,16 +311,27 @@ class Maze:
             self.locker_id.add(locker_id)
             locker = Locker(locker_id)
             self.lockers[(r, c)] = locker
-        
+
+    def _find_char(self, char):
+        """
+        Finds the first occurrence of a character in the maze.
+        Returns the coordinates (row, column) of the character.
+        """
+        for r, row in enumerate(self.maze):
+            for c, val in enumerate(row):
+                if val == char:
+                    return (r, c)
+        return None
+
     def unique_path_checker(self):
         """
         Check if the maze has a unique path from start to end using DFS.
         If a unique path is found, it is stored in self.unique_path.
         """
         self.unique_path = []
-        start = (1, 1)
-        end = (self.height - 2, self.width - 2)
-        
+        start = self._find_char('S')
+        end = self._find_char('E')
+
         stack = [(start, [start])]  # Stack stores tuples of (current_node, path_to_current_node)
         paths_found = []
 
@@ -352,7 +378,7 @@ def json_saver(maze_obj):
             ["#", "S", ".", ".", "#", "L", "#", ".", ".", "#", ".", "#", ".", "#", ".", "#", "."],
             ["#", "L", "#", "#", "#", ".", "#", ".", "#", "." ... ]}"""
 
-    path_file = "file_path"
+    path_file = "file_path.json"
     maze_data = {
         "width": maze_obj.width,
         "height": maze_obj.height,
@@ -416,5 +442,9 @@ if __name__ == "__main__":
     for boss_pos, boss_group in maze_obj.bosses.items():
         print(f"Boss at {boss_pos}, HP: {boss_group.bosses}")
 
+    print(f"Skills: {maze_obj.player_skills}")
+    for skill in maze_obj.player_skills:
+        print(f"Player Skill - Damage: {skill[0]}, Cooldown: {skill[1]}")
+    
     json_saver(maze_obj)
     # print(f"Maze data saved to {path_file}")

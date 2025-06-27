@@ -193,3 +193,8 @@ def json_loader(json_path):
         data = json.load(f)
     return data["maze"]
 
+if __name__ == "__main__":
+    maze = json_loader("D:\\1-sjh-workspace\\maze-game\\test\\dp_test\\result_maze_15_15_2_formatted.json")
+    final_path, max_score = solve_with_dp(maze)
+    print(f"Final Path: {final_path}")
+    print(f"Maximum Score: {max_score}")
