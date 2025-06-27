@@ -14,8 +14,7 @@ export const useGameStore = defineStore('game', {
     playerPath: [],
     playerScore: 0,
     gameWon: false,
-    puzzleSolution: null,
-    puzzleTries: null,
+    activePuzzle: null, // New state for the current puzzle
     bossBattleResult: null,
     playerSkills: null,
     bossHps: null,
@@ -34,8 +33,7 @@ export const useGameStore = defineStore('game', {
       this.playerPath = [];
       this.playerScore = 0;
       this.gameWon = false;
-      this.puzzleSolution = null;
-      this.puzzleTries = null;
+      this.activePuzzle = null;
       this.bossBattleResult = null;
       this.playerSkills = null;
       this.bossHps = null;
@@ -157,7 +155,9 @@ export const useGameStore = defineStore('game', {
           this.mazeData[newR][newC] = '.'; // Consume lever
           const puzzleData = this.leverPuzzles[`${newR},${newC}`];
           if (puzzleData && puzzleData.constraints && puzzleData.password_hash) {
-            this.solvePuzzle(puzzleData);
+            this.activePuzzle = { ...puzzleData, solution: null, tries: null };
+            // Automatically solve it for now, but the puzzle is now active
+            this.solvePuzzle();
           }
         } else if (cell === 'B') {
           this.playerScore += 10;
@@ -169,14 +169,14 @@ export const useGameStore = defineStore('game', {
         }
       }
     },
-    async solvePuzzle(puzzleData) {
+    async solvePuzzle() {
+      if (!this.activePuzzle) return;
+
       this.isLoading = true;
-      this.puzzleSolution = null; // Clear previous solution
-      this.puzzleTries = null;
       try {
-        const response = await ApiService.solvePuzzle(puzzleData);
-        this.puzzleSolution = response.data.solution;
-        this.puzzleTries = response.data.tries;
+        const response = await ApiService.solvePuzzle(this.activePuzzle);
+        this.activePuzzle.solution = response.data.solution;
+        this.activePuzzle.tries = response.data.tries;
       } catch (err) {
         this.error = 'Failed to solve puzzle.';
         console.error(err);

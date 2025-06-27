@@ -54,8 +54,12 @@
                         <p>Path: {{ game.greedyPath ? 'Found' : 'N/A' }}</p>
                         <p>Value: <span class="value-greedy">{{ game.greedyValue }}</span></p>
                     </div>
-                    <div class="result-item" v-if="game.puzzleSolution">
-                        <PuzzleResult :solution="game.puzzleSolution" :tries="game.puzzleTries" />
+                    <div class="result-item" v-if="game.activePuzzle">
+                        <PuzzleResult 
+                            :constraints="game.activePuzzle.constraints"
+                            :solution="game.activePuzzle.solution" 
+                            :tries="game.activePuzzle.tries" 
+                        />
                     </div>
                     <div class="result-item" v-if="game.bossBattleResult">
                         <BattleReport 
