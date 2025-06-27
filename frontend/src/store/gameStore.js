@@ -17,9 +17,11 @@ export const useGameStore = defineStore('game', {
     puzzleSolution: null,
     bossBattleResult: null,
     leverPuzzles: {},
+    isGameActive: false,
   }),
   actions: {
     async generateMaze(size) {
+      this.isGameActive = true;
       this.isLoading = true;
       this.error = null;
       this.mazeData = []; // Start with an empty maze for animation

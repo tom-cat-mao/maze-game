@@ -1,71 +1,114 @@
 <template>
   <div class="game-view">
     <h1>Algorithm-Driven Maze Adventure</h1>
-    <div class="controls">
-      <div class="control-group">
-        <label for="maze-size">Maze Size:</label>
-        <input type="number" id="maze-size" v-model.number="mazeSize" min="5" max="50">
-        <button @click="handleGenerateMaze" :disabled="game.isLoading">
-          {{ game.isLoading ? 'Generating...' : 'Generate Maze' }}
+
+    <!-- Welcome Screen -->
+    <div v-if="!game.isGameActive" class="welcome-screen">
+        <h2>Welcome!</h2>
+        <p>Set your maze size and start your adventure.</p>
+        <div class="control-group">
+            <label for="maze-size">Maze Size:</label>
+            <input type="number" id="maze-size" v-model.number="mazeSize" min="5" max="50">
+        </div>
+        <button @click="handleGenerateMaze" class="start-game-btn">
+          {{ game.isLoading ? 'Loading...' : 'Start Game' }}
         </button>
-      </div>
-      <div class="control-group">
-        <button @click="game.solveDp()" :disabled="!game.mazeData || game.isLoading">
-          {{ game.isLoading ? 'Solving...' : 'Solve with DP' }}
-        </button>
-        <button @click="game.solveGreedy()" :disabled="!game.mazeData || game.isLoading">
-          {{ game.isLoading ? 'Solving...' : 'Solve with Greedy' }}
-        </button>
-      </div>
     </div>
 
-    <div v-if="game.error" class="error-message">{{ game.error }}</div>
+    <!-- Main Game Content -->
+    <div v-if="game.isGameActive">
+        <div class="controls">
+          <div class="control-group">
+            <label for="maze-size-ingame">Maze Size:</label>
+            <input type="number" id="maze-size-ingame" v-model.number="mazeSize" min="5" max="50">
+            <button @click="handleGenerateMaze" :disabled="game.isLoading">
+              {{ game.isLoading ? 'Generating...' : 'New Game' }}
+            </button>
+          </div>
+          <div class="control-group">
+            <button @click="game.solveDp()" :disabled="!game.mazeData || game.isLoading">
+              {{ game.isLoading ? 'Solving...' : 'Solve with DP' }}
+            </button>
+            <button @click="game.solveGreedy()" :disabled="!game.mazeData || game.isLoading">
+              {{ game.isLoading ? 'Solving...' : 'Solve with Greedy' }}
+            </button>
+          </div>
+        </div>
 
-    <div class="results-container">
-        <MazeGrid :maze="game.mazeData" :dpPath="game.dpPath" :greedyPath="game.greedyPath" :playerPosition="game.playerPosition" />
-        <div class="info-panel">
-            <h2>Player</h2>
-            <div class="result-item">
-                <h3>Score: <span class="value-player">{{ game.playerScore }}</span></h3>
-                <p v-if="game.gameWon" class="game-won-message">You reached the end!</p>
+        <div v-if="game.error" class="error-message">{{ game.error }}</div>
+
+        <div class="results-container">
+            <MazeGrid :maze="game.mazeData" :dpPath="game.dpPath" :greedyPath="game.greedyPath" :playerPosition="game.playerPosition" />
+            <div class="info-panel">
+                <div class="info-section">
+                    <h2>Player</h2>
+                    <div class="result-item">
+                        <h3>Score: <span class="value-player">{{ game.playerScore }}</span></h3>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h2>Results</h2>
+                    <div class="result-item">
+                        <h3>Dynamic Programming</h3>
+                        <p>Path: {{ game.dpPath ? 'Found' : 'N/A' }}</p>
+                        <p>Value: <span class="value-dp">{{ game.dpValue }}</span></p>
+                    </div>
+                    <div class="result-item">
+                        <h3>Greedy Algorithm</h3>
+                        <p>Path: {{ game.greedyPath ? 'Found' : 'N/A' }}</p>
+                        <p>Value: <span class="value-greedy">{{ game.greedyValue }}</span></p>
+                    </div>
+                    <div class="result-item" v-if="game.puzzleSolution">
+                        <h3>Puzzle Solved!</h3>
+                        <div class="puzzle-password-container">
+                            <span>Password:</span>
+                            <span v-for="(digit, index) in game.puzzleSolution" :key="index" class="password-digit">
+                                {{ digit }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="result-item" v-if="game.bossBattleResult">
+                        <h3>Boss Defeated!</h3>
+                        <p>Turns: {{ game.bossBattleResult.turns }}</p>
+                        <div class="boss-sequence-container">
+                            <span>Sequence:</span>
+                            <template v-for="(skill, index) in game.bossBattleResult.sequence" :key="index">
+                                <span class="skill-badge">{{ skill }}</span>
+                                <span v-if="index < game.bossBattleResult.sequence.length - 1" class="sequence-arrow">→</span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <div class="legend">
+                        <h3>Legend</h3>
+                        <ul>
+                            <li><span class="swatch wall"></span> Wall</li>
+                            <li><span class="swatch start"></span> Start</li>
+                            <li><span class="swatch end"></span> End</li>
+                            <li><span class="swatch gold"></span> Gold (G)</li>
+                            <li><span class="swatch trap"></span> Trap (T)</li>
+                            <li><span class="swatch lever"></span> Puzzle Lever (L)</li>
+                            <li><span class="swatch boss"></span> Boss (B)</li>
+                            <li><span class="swatch path-dp"></span> DP Path</li>
+                            <li><span class="swatch path-greedy"></span> Greedy Path</li>
+                            <li><span class="swatch path-common"></span> Common Path</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
-            <hr>
-            <h2>Results</h2>
-            <div class="result-item">
-                <h3>Dynamic Programming</h3>
-                <p>Path: {{ game.dpPath ? 'Found' : 'N/A' }}</p>
-                <p>Value: <span class="value-dp">{{ game.dpValue }}</span></p>
-            </div>
-            <div class="result-item">
-                <h3>Greedy Algorithm</h3>
-                <p>Path: {{ game.greedyPath ? 'Found' : 'N/A' }}</p>
-                <p>Value: <span class="value-greedy">{{ game.greedyValue }}</span></p>
-            </div>
-            <div class="result-item" v-if="game.puzzleSolution">
-                <h3>Puzzle Solved!</h3>
-                <p>Password: {{ game.puzzleSolution.join(', ') }}</p>
-            </div>
-            <div class="result-item" v-if="game.bossBattleResult">
-                <h3>Boss Defeated!</h3>
-                <p>Turns: {{ game.bossBattleResult.turns }}</p>
-                <p>Sequence: {{ game.bossBattleResult.sequence.join(', ') }}</p>
-            </div>
-            <hr>
-            <div class="legend">
-                <h3>Legend</h3>
-                <ul>
-                    <li><span class="swatch wall"></span> Wall</li>
-                    <li><span class="swatch start"></span> Start</li>
-                    <li><span class="swatch end"></span> End</li>
-                    <li><span class="swatch gold"></span> Gold (G)</li>
-                    <li><span class="swatch trap"></span> Trap (T)</li>
-                    <li><span class="swatch lever"></span> Puzzle Lever (L)</li>
-                    <li><span class="swatch boss"></span> Boss (B)</li>
-                    <li><span class="swatch path-dp"></span> DP Path</li>
-                    <li><span class="swatch path-greedy"></span> Greedy Path</li>
-                    <li><span class="swatch path-common"></span> Common Path</li>
-                </ul>
-            </div>
+        </div>
+    </div>
+
+    <!-- Game Won Modal -->
+    <div v-if="game.gameWon" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Congratulations!</h2>
+            <p class="final-score-label">Your Final Score</p>
+            <p class="final-score-value">{{ game.playerScore }}</p>
+            <button @click="handleGenerateMaze" class="play-again-btn">Play Again</button>
         </div>
     </div>
   </div>
@@ -173,15 +216,69 @@ input {
 }
 
 .info-panel {
-    background-color: #fff;
-    padding: 20px;
+    background-color: #f8f9fa;
+    padding: 10px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    min-width: 250px;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.info-section {
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.info-section h2 {
+    margin-top: 0;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 5px;
+    margin-bottom: 15px;
 }
 
 .result-item {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
+}
+
+.result-item:last-child {
+    margin-bottom: 0;
+}
+
+.puzzle-password-container, .boss-sequence-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.password-digit {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    text-align: center;
+    font-weight: bold;
+    border: 1px solid #ced4da;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.skill-badge {
+    background-color: #007bff;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 15px;
+    font-size: 0.9em;
+}
+
+.sequence-arrow {
+    color: #6c757d;
+    font-weight: bold;
 }
 
 .value-dp {
@@ -203,6 +300,80 @@ input {
     color: #28a745;
     font-weight: bold;
     text-align: center;
+}
+
+.welcome-screen {
+    text-align: center;
+    padding: 40px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    margin-top: 20px;
+}
+
+.welcome-screen h2 {
+    margin-top: 0;
+}
+
+.start-game-btn, .play-again-btn {
+    padding: 12px 25px;
+    font-size: 1.1em;
+    margin-top: 20px;
+    background-color: #28a745;
+    border: none;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.start-game-btn:hover, .play-again-btn:hover {
+    background-color: #218838;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 30px 40px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content h2 {
+    color: #007bff;
+    margin-top: 0;
+}
+
+.final-score-label {
+    font-size: 1.2em;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.final-score-value {
+    font-size: 3em;
+    font-weight: bold;
+    color: #ffc107;
+    margin-top: 0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 .legend .swatch {
