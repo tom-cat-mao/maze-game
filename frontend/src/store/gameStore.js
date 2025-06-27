@@ -62,6 +62,14 @@ export const useGameStore = defineStore('game', {
             });
             this.leverPuzzles = puzzles;
         }
+        // Check for player skills
+        if (data.player_skills) {
+            this.playerSkills = data.player_skills.map((skill, index) => ({
+                name: `Skill ${index + 1}`, // Assign a generic name
+                damage: skill[0],
+                cooldown: skill[1],
+            }));
+        }
       };
 
       const onComplete = () => {
@@ -183,13 +191,11 @@ export const useGameStore = defineStore('game', {
       }
       this.isLoading = true;
       try {
-        // Skills are still hardcoded, but boss HPs are now dynamic
-        const skills = [
-            {"name": "Quick Attack", "damage": 10, "cooldown": 0},
-            {"name": "Heavy Slam", "damage": 25, "cooldown": 1},
-        ];
-        this.playerSkills = skills; // Store skills so the UI can display them
-        const response = await ApiService.solveBossBattle(this.bossHps, skills);
+        if (!this.playerSkills || this.playerSkills.length === 0) {
+            this.error = "Player skills not available for boss battle!";
+            return;
+        }
+        const response = await ApiService.solveBossBattle(this.bossHps, this.playerSkills);
         this.bossBattleResult = response.data;
       } catch (err) {
         this.error = 'Failed to solve boss battle.';

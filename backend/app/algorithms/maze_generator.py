@@ -473,7 +473,12 @@ def generate_maze(width, height):
                 })
 
             # Yield the final maze with all elements placed and boss data
-            yield {'maze': maze_obj.maze, 'bosses': boss_hps, 'lockers': lockers_data}
+            yield {
+                'maze': maze_obj.maze,
+                'bosses': boss_hps,
+                'lockers': lockers_data,
+                'player_skills': maze_obj.player_skills
+            }
             break # Exit the loop once a valid maze is created
 
 if __name__ == "__main__":
