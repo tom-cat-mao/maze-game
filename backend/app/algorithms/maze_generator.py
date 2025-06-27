@@ -89,19 +89,19 @@ class Locker:
         if len(set(password)) != len(password):
             unique_flag = False
 
-        for digit in password:
+        for i, digit in enumerate(password):
             if digit not in prime_numbers:
                 prime_flag = False
             if digit in even_numbers:
-                # Tips for even digit, e.g. [position, 0]
-                self.tips.append([password.index(digit), 0])
+                # Tips for even digit, e.g. [position, 0]. Position is 1-based.
+                self.tips.append([i + 1, 0])
             if digit in odd_numbers:
-                # Tips for odd digit, e.g. [position, 1]
-                self.tips.append([password.index(digit), 1])
+                # Tips for odd digit, e.g. [position, 1]. Position is 1-based.
+                self.tips.append([i + 1, 1])
             
+            # The mask constraint is 0-indexed.
             mask = [-1, -1, -1]
-            digit_index = password.index(digit)
-            mask[digit_index] = digit
+            mask[i] = digit
             self.tips.append(mask)
 
         if prime_flag:
