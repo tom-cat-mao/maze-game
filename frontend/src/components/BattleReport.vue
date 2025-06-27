@@ -6,7 +6,7 @@
         <strong>Your Skills</strong>
         <div v-if="playerSkills" class="vs-items">
           <span v-for="skill in playerSkills" :key="skill.name" class="skill-badge player">
-            {{ skill.name }}
+            {{ skill.name }} (DMG: {{ skill.damage }})
           </span>
         </div>
       </div>
