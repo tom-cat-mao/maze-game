@@ -15,7 +15,8 @@ class PathfindingResponse(BaseModel):
     value: int
 
 class PuzzleRequest(BaseModel):
-    constraints: Dict[str, Any]
+    password_hash: str
+    constraints: List[Any]
 
 class PuzzleResponse(BaseModel):
     solution: List[int]

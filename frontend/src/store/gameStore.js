@@ -49,23 +49,29 @@ export const useGameStore = defineStore('game', {
         if (data.bosses && data.bosses.length > 0) {
             this.bossHps = data.bosses;
         }
+        // Check for puzzle data
+        if (data.lockers) {
+            const puzzles = {};
+            data.lockers.forEach(locker => {
+                const key = `${locker.position[0]},${locker.position[1]}`;
+                puzzles[key] = {
+                    id: locker.id,
+                    constraints: locker.tips,
+                    password_hash: locker.password_hash,
+                };
+            });
+            this.leverPuzzles = puzzles;
+        }
       };
 
       const onComplete = () => {
         if (this.mazeData && this.mazeData.length > 0) {
-            const puzzleTypes = ["prime", "even", "odd"];
             for (let r = 0; r < this.mazeData.length; r++) {
                 for (let c = 0; c < this.mazeData[r].length; c++) {
                     const cell = this.mazeData[r][c];
                     if (cell === 'S') {
                         this.playerPosition = { r, c };
                         this.playerPath.push([r, c]);
-                    } else if (cell === 'L') {
-                        this.leverPuzzles[`${r},${c}`] = {
-                            length: 3,
-                            unique: Math.random() > 0.5,
-                            type: puzzleTypes[Math.floor(Math.random() * puzzleTypes.length)],
-                        };
                     }
                 }
             }
@@ -141,9 +147,9 @@ export const useGameStore = defineStore('game', {
         } else if (cell === 'L') {
           this.playerScore += 5;
           this.mazeData[newR][newC] = '.'; // Consume lever
-          const puzzleConstraints = this.leverPuzzles[`${newR},${newC}`];
-          if (puzzleConstraints) {
-            this.solvePuzzle(puzzleConstraints);
+          const puzzleData = this.leverPuzzles[`${newR},${newC}`];
+          if (puzzleData && puzzleData.constraints && puzzleData.password_hash) {
+            this.solvePuzzle(puzzleData);
           }
         } else if (cell === 'B') {
           this.playerScore += 10;
@@ -155,12 +161,12 @@ export const useGameStore = defineStore('game', {
         }
       }
     },
-    async solvePuzzle(constraints) {
+    async solvePuzzle(puzzleData) {
       this.isLoading = true;
       this.puzzleSolution = null; // Clear previous solution
       this.puzzleTries = null;
       try {
-        const response = await ApiService.solvePuzzle(constraints);
+        const response = await ApiService.solvePuzzle(puzzleData);
         this.puzzleSolution = response.data.solution;
         this.puzzleTries = response.data.tries;
       } catch (err) {

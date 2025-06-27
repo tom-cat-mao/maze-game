@@ -98,14 +98,21 @@ class Locker:
             if digit in odd_numbers:
                 # Tips for odd digit, e.g. [position, 1]. Position is 1-based.
                 self.tips.append([i + 1, 1])
-            
-            # The mask constraint is 0-indexed.
-            mask = [-1, -1, -1]
-            mask[i] = digit
+        
+        # Add one random "digit reveal" constraint to make it more interesting
+        # instead of revealing all digits.
+        if password:
+            revealed_idx = random.randint(0, len(password) - 1)
+            mask = [-1] * len(password)
+            mask[revealed_idx] = password[revealed_idx]
             self.tips.append(mask)
 
         if prime_flag:
-            self.tips.append([-1,-1])   
+            self.tips.append([-1,-1])
+        
+        if unique_flag:
+            # Add a new constraint type to indicate uniqueness, e.g., [-2, -2]
+            self.tips.append([-2, -2])
 
         return password
 
@@ -408,9 +415,18 @@ def generate_maze(width, height):
             boss_hps = []
             if hasattr(maze_obj, 'bosses_group') and maze_obj.bosses_group:
                 boss_hps = maze_obj.bosses_group.bosses
+            
+            lockers_data = []
+            for pos, locker in maze_obj.lockers.items():
+                lockers_data.append({
+                    'position': pos,
+                    'id': locker.locker_id,
+                    'tips': locker.get_tips(),
+                    'password_hash': locker.password_hash
+                })
 
             # Yield the final maze with all elements placed and boss data
-            yield {'maze': maze_obj.maze, 'bosses': boss_hps}
+            yield {'maze': maze_obj.maze, 'bosses': boss_hps, 'lockers': lockers_data}
             break # Exit the loop once a valid maze is created
 
 if __name__ == "__main__":

@@ -64,8 +64,11 @@ export default {
   solveGreedy(maze) {
     return apiClient.post('/solve/greedy', { maze });
   },
-  solvePuzzle(constraints) {
-    return apiClient.post('/solve/puzzle', { constraints });
+  solvePuzzle(puzzleData) {
+    return apiClient.post('/solve/puzzle', {
+      password_hash: puzzleData.password_hash,
+      constraints: puzzleData.constraints,
+    });
   },
   solveBossBattle(bossHps, skills) {
     // Use boss_hps to match the updated Pydantic model

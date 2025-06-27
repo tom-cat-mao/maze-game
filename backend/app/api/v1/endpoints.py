@@ -62,9 +62,8 @@ def solve_puzzle_endpoint(request: PuzzleRequest):
     Solves a puzzle by calling the puzzle helper service.
     """
     try:
-        solution, tries = prepare_and_solve_puzzle(request.constraints)
-        if not solution:
-             raise HTTPException(status_code=404, detail="No solution found for the puzzle.")
+        solution, tries = prepare_and_solve_puzzle(request.password_hash, request.constraints)
+        # The solver now returns an empty list on failure, which is a valid response.
         return {"solution": solution, "tries": tries}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

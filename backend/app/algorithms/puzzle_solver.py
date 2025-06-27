@@ -24,11 +24,20 @@ def solve_puzzle(password, constraints):
         for c in cons:
             # Constraint: All digits are prime and unique
             if c == [-1, -1]:
-                seen = set() 
+                seen = set()
                 for digit in p:
                     if digit is not None:
                         if digit not in primes:
                             return False
+                        if digit in seen:
+                            return False
+                        seen.add(digit)
+            
+            # Constraint: All digits are unique
+            elif c == [-2, -2]:
+                seen = set()
+                for digit in p:
+                    if digit is not None:
                         if digit in seen:
                             return False
                         seen.add(digit)
