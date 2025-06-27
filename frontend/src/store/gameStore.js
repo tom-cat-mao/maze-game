@@ -15,6 +15,7 @@ export const useGameStore = defineStore('game', {
     playerScore: 0,
     gameWon: false,
     puzzleSolution: null,
+    puzzleTries: null,
     bossBattleResult: null,
     playerSkills: null,
     bossHps: null,
@@ -34,6 +35,7 @@ export const useGameStore = defineStore('game', {
       this.playerScore = 0;
       this.gameWon = false;
       this.puzzleSolution = null;
+      this.puzzleTries = null;
       this.bossBattleResult = null;
       this.playerSkills = null;
       this.bossHps = null;
@@ -156,9 +158,11 @@ export const useGameStore = defineStore('game', {
     async solvePuzzle(constraints) {
       this.isLoading = true;
       this.puzzleSolution = null; // Clear previous solution
+      this.puzzleTries = null;
       try {
         const response = await ApiService.solvePuzzle(constraints);
         this.puzzleSolution = response.data.solution;
+        this.puzzleTries = response.data.tries;
       } catch (err) {
         this.error = 'Failed to solve puzzle.';
         console.error(err);

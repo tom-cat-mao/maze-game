@@ -7,16 +7,24 @@
         {{ digit }}
       </span>
     </div>
+    <p v-if="tries !== null" class="tries-count">Solved in {{ tries }} tries.</p>
   </div>
 </template>
 
 <script setup>
 defineProps({
   solution: Array,
+  tries: Number,
 });
 </script>
 
 <style scoped>
+.tries-count {
+  font-size: 0.9em;
+  color: #6c757d;
+  margin-top: 8px;
+}
+
 .puzzle-password-container {
   display: flex;
   align-items: center;

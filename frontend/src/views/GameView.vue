@@ -55,7 +55,7 @@
                         <p>Value: <span class="value-greedy">{{ game.greedyValue }}</span></p>
                     </div>
                     <div class="result-item" v-if="game.puzzleSolution">
-                        <PuzzleResult :solution="game.puzzleSolution" />
+                        <PuzzleResult :solution="game.puzzleSolution" :tries="game.puzzleTries" />
                     </div>
                     <div class="result-item" v-if="game.bossBattleResult">
                         <BattleReport 

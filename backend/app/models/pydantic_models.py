@@ -19,6 +19,7 @@ class PuzzleRequest(BaseModel):
 
 class PuzzleResponse(BaseModel):
     solution: List[int]
+    tries: int
 
 class BossBattleRequest(BaseModel):
     boss_hps: List[int]
