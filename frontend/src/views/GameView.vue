@@ -3,17 +3,12 @@
     <h1>Algorithm-Driven Maze Adventure</h1>
 
     <!-- Welcome Screen -->
-    <div v-if="!game.isGameActive" class="welcome-screen">
-        <h2>Welcome!</h2>
-        <p>Set your maze size and start your adventure.</p>
-        <div class="control-group">
-            <label for="maze-size">Maze Size:</label>
-            <input type="number" id="maze-size" v-model.number="mazeSize" min="5" max="50">
-        </div>
-        <button @click="handleGenerateMaze" class="start-game-btn">
-          {{ game.isLoading ? 'Loading...' : 'Start Game' }}
-        </button>
-    </div>
+    <WelcomeScreen 
+      v-if="!game.isGameActive" 
+      v-model="mazeSize"
+      :loading="game.isLoading"
+      @startGame="handleGenerateMaze"
+    />
 
     <!-- Main Game Content -->
     <div v-if="game.isGameActive">
@@ -60,48 +55,14 @@
                         <p>Value: <span class="value-greedy">{{ game.greedyValue }}</span></p>
                     </div>
                     <div class="result-item" v-if="game.puzzleSolution">
-                        <h3>Puzzle Solved!</h3>
-                        <div class="puzzle-password-container">
-                            <span>Password:</span>
-                            <span v-for="(digit, index) in game.puzzleSolution" :key="index" class="password-digit">
-                                {{ digit }}
-                            </span>
-                        </div>
+                        <PuzzleResult :solution="game.puzzleSolution" />
                     </div>
                     <div class="result-item" v-if="game.bossBattleResult">
-                        <div class="battle-report">
-                            <h3>Boss Battle Report</h3>
-                            <div class="vs-container">
-                                <div class="vs-panel">
-                                    <strong>Your Skills</strong>
-                                    <div v-if="game.playerSkills" class="vs-items">
-                                        <span v-for="skill in game.playerSkills" :key="skill.name" class="skill-badge player">
-                                            {{ skill.name }}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="vs-separator">VS</div>
-                                <div class="vs-panel">
-                                    <strong>Enemy Lineup</strong>
-                                    <div v-if="game.bossHps" class="vs-items">
-                                        <span v-for="(hp, index) in game.bossHps" :key="index" class="skill-badge enemy">
-                                            BOSS ({{ hp }} HP)
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="battle-log">
-                                <strong>Optimal Sequence:</strong>
-                                <ul class="log-list">
-                                    <li v-for="(skill, index) in game.bossBattleResult.sequence" :key="index">
-                                        Turn {{ index + 1 }}: Used <strong>{{ skill }}</strong>
-                                    </li>
-                                </ul>
-                            </div>
-                            <div class="battle-summary">
-                                <strong>Total Turns to Win: <span class="value-player">{{ game.bossBattleResult.turns }}</span></strong>
-                            </div>
-                        </div>
+                        <BattleReport 
+                            :playerSkills="game.playerSkills"
+                            :bossHps="game.bossHps"
+                            :battleResult="game.bossBattleResult"
+                        />
                     </div>
                 </div>
 
@@ -127,21 +88,22 @@
     </div>
 
     <!-- Game Won Modal -->
-    <div v-if="game.gameWon" class="modal-overlay">
-        <div class="modal-content">
-            <h2>Congratulations!</h2>
-            <p class="final-score-label">Your Final Score</p>
-            <p class="final-score-value">{{ game.playerScore }}</p>
-            <button @click="handleGenerateMaze" class="play-again-btn">Play Again</button>
-        </div>
-    </div>
+    <GameWonModal 
+        v-if="game.gameWon"
+        :score="game.playerScore"
+        @playAgain="handleGenerateMaze"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useGameStore } from '../store/gameStore';
-import MazeGrid from '../components/MazeGrid.vue';
+import MazeGrid from '@/components/MazeGrid.vue';
+import WelcomeScreen from '@/components/WelcomeScreen.vue';
+import GameWonModal from '@/components/GameWonModal.vue';
+import BattleReport from '@/components/BattleReport.vue';
+import PuzzleResult from '@/components/PuzzleResult.vue';
 
 const mazeSize = ref(15);
 const game = useGameStore();
@@ -264,64 +226,7 @@ input {
     margin-bottom: 15px;
 }
 
-.battle-report h3 {
-    border-bottom-color: #dc3545;
-    text-align: center;
-}
-
-.vs-container {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    text-align: center;
-    margin-bottom: 15px;
-}
-
-.vs-panel {
-    flex: 1;
-}
-
-.vs-items {
-    margin-top: 5px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    justify-content: center;
-}
-
-.vs-separator {
-    font-size: 2em;
-    color: #dc3545;
-    font-weight: bold;
-    padding: 0 10px;
-}
-
-.battle-log {
-    margin-top: 15px;
-}
-
-.log-list {
-    list-style-type: none;
-    padding-left: 0;
-    font-family: 'Courier New', Courier, monospace;
-    background-color: #f8f9fa;
-    border-radius: 4px;
-    padding: 10px;
-    margin-top: 5px;
-    max-height: 150px;
-    overflow-y: auto;
-    border: 1px solid #e9ecef;
-}
-
-.log-list li {
-    padding: 2px 0;
-}
-
-.battle-summary {
-    text-align: right;
-    margin-top: 10px;
-    font-weight: bold;
-}
+/* Battle report styles are now in BattleReport.vue */
 
 .result-item {
     margin-bottom: 15px;
@@ -331,47 +236,7 @@ input {
     margin-bottom: 0;
 }
 
-.puzzle-password-container, .boss-sequence-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.password-digit {
-    display: inline-block;
-    width: 30px;
-    height: 30px;
-    line-height: 30px;
-    text-align: center;
-    font-weight: bold;
-    border: 1px solid #ced4da;
-    background-color: #e9ecef;
-    border-radius: 4px;
-    font-family: 'Courier New', Courier, monospace;
-}
-
-.skill-badge {
-    background-color: #007bff;
-    color: white;
-    padding: 4px 10px;
-    border-radius: 15px;
-    font-size: 0.9em;
-    margin: 2px;
-}
-
-.skill-badge.player {
-    background-color: #007bff;
-}
-
-.skill-badge.enemy {
-    background-color: #6f42c1;
-}
-
-.sequence-arrow {
-    color: #6c757d;
-    font-weight: bold;
-}
+/* Component-specific styles are now in their respective files */
 
 .value-dp {
     color: #b8860b; /* DarkGoldenRod */
@@ -392,80 +257,6 @@ input {
     color: #28a745;
     font-weight: bold;
     text-align: center;
-}
-
-.welcome-screen {
-    text-align: center;
-    padding: 40px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    margin-top: 20px;
-}
-
-.welcome-screen h2 {
-    margin-top: 0;
-}
-
-.start-game-btn, .play-again-btn {
-    padding: 12px 25px;
-    font-size: 1.1em;
-    margin-top: 20px;
-    background-color: #28a745;
-    border: none;
-    color: white;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.start-game-btn:hover, .play-again-btn:hover {
-    background-color: #218838;
-}
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background-color: white;
-    padding: 30px 40px;
-    border-radius: 10px;
-    text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    animation: fadeIn 0.3s ease-out;
-}
-
-.modal-content h2 {
-    color: #007bff;
-    margin-top: 0;
-}
-
-.final-score-label {
-    font-size: 1.2em;
-    color: #6c757d;
-    margin-bottom: 5px;
-}
-
-.final-score-value {
-    font-size: 3em;
-    font-weight: bold;
-    color: #ffc107;
-    margin-top: 0;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
 }
 
 .legend .swatch {
