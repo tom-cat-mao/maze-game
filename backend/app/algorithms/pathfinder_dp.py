@@ -1,5 +1,6 @@
 import logging
 from collections import deque
+import json
 
 # --- Constants ---
 SCORE_MAP = {'G': 10, 'T': -5, 'S': 0, 'E': 0, '.': 0, 'B':0, 'L':0}
@@ -186,3 +187,14 @@ def _find_shortest_path_bfs(graph, start, end):
                 new_path.append(neighbor)
                 queue.append((neighbor, new_path))
     return None
+
+def json_loader(json_path):
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+    return data["maze"]
+
+if __name__ == "__main__":
+    maze = json_loader("D:\\1-sjh-workspace\\maze-game\\test\\dp_test\\result_maze_15_15_2_formatted.json")
+    final_path, max_score = solve_with_dp(maze)
+    print(f"Final Path: {final_path}")
+    print(f"Maximum Score: {max_score}")
