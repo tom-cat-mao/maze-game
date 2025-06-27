@@ -20,11 +20,12 @@ router = APIRouter()
 async def generate_maze_endpoint(request: MazeGenerationRequest):
     """
     Generates a new maze based on the provided size, streaming the generation process.
+    The final event in the stream includes dynamic boss data.
     """
     async def event_stream():
         maze_generator = maze_gen_algo(request.size, request.size)
-        for maze_state in maze_generator:
-            yield f"data: {json.dumps({'maze': maze_state})}\n\n"
+        for data_payload in maze_generator:
+            yield f"data: {json.dumps(data_payload)}\n\n"
             await asyncio.sleep(0.02)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
@@ -116,8 +117,9 @@ def solve_boss_endpoint(request: BossBattleRequest):
     This endpoint adapts the frontend request to match the backend algorithm's expected input format.
     """
     try:
-        # 1. Adapt the input data structure
-        bosses_list = [request.boss_hp]
+        # 1. Adapt the input data structure from the request
+        # The frontend now sends a list of HPs, which matches the algorithm's expectation.
+        bosses_list = request.boss_hps
         
         # The algorithm expects a list of lists [damage, cooldown], not a list of dicts
         skills_list = [[s['damage'], s['cooldown']] for s in request.skills]

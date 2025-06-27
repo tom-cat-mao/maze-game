@@ -16,6 +16,7 @@ export const useGameStore = defineStore('game', {
     gameWon: false,
     puzzleSolution: null,
     bossBattleResult: null,
+    bossHps: null,
     leverPuzzles: {},
     isGameActive: false,
   }),
@@ -33,10 +34,17 @@ export const useGameStore = defineStore('game', {
       this.gameWon = false;
       this.puzzleSolution = null;
       this.bossBattleResult = null;
+      this.bossHps = null;
       this.leverPuzzles = {};
 
-      const onData = (mazeState) => {
-        this.mazeData = mazeState;
+      const onData = (data) => {
+        if (data.maze) {
+            this.mazeData = data.maze;
+        }
+        // Check if the final payload with boss data has arrived
+        if (data.bosses && data.bosses.length > 0) {
+            this.bossHps = data.bosses;
+        }
       };
 
       const onComplete = () => {
@@ -157,14 +165,18 @@ export const useGameStore = defineStore('game', {
       }
     },
     async solveBossBattle() {
+      if (!this.bossHps || this.bossHps.length === 0) {
+        this.error = "No boss data available for this battle!";
+        return;
+      }
       this.isLoading = true;
       try {
-        const bossHp = 100;
+        // Skills are still hardcoded, but boss HPs are now dynamic
         const skills = [
             {"name": "Quick Attack", "damage": 10, "cooldown": 0},
             {"name": "Heavy Slam", "damage": 25, "cooldown": 1},
         ];
-        const response = await ApiService.solveBossBattle(bossHp, skills);
+        const response = await ApiService.solveBossBattle(this.bossHps, skills);
         this.bossBattleResult = response.data;
       } catch (err) {
         this.error = 'Failed to solve boss battle.';

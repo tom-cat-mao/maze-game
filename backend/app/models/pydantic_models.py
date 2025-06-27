@@ -21,7 +21,7 @@ class PuzzleResponse(BaseModel):
     solution: List[int]
 
 class BossBattleRequest(BaseModel):
-    boss_hp: int
+    boss_hps: List[int]
     skills: List[Dict[str, Any]]
 
 class BossBattleResponse(BaseModel):

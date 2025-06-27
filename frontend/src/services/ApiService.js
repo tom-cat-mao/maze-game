@@ -44,7 +44,8 @@ export default {
             if (jsonStr) {
               try {
                 const data = JSON.parse(jsonStr);
-                if (onData) onData(data.maze);
+                // Pass the whole data object to the callback, not just the maze
+                if (onData) onData(data);
               } catch (e) {
                 console.error("Failed to parse maze chunk", e);
               }
@@ -66,7 +67,8 @@ export default {
   solvePuzzle(constraints) {
     return apiClient.post('/solve/puzzle', { constraints });
   },
-  solveBossBattle(bossHp, skills) {
-    return apiClient.post('/solve/boss', { boss_hp: bossHp, skills });
+  solveBossBattle(bossHps, skills) {
+    // Use boss_hps to match the updated Pydantic model
+    return apiClient.post('/solve/boss', { boss_hps: bossHps, skills });
   },
 };

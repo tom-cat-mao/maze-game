@@ -373,13 +373,18 @@ def generate_maze(width, height):
         maze_obj = Maze(width, height)
         maze_obj.generate_maze()
         # Yield the maze after the basic structure is generated
-        yield maze_obj.maze
+        yield {'maze': maze_obj.maze}
         
         if maze_obj.unique_path_checker():
             # Yield the maze with a guaranteed unique path
             maze_obj.place_elements()
-            # Yield the final maze with all elements placed
-            yield maze_obj.maze
+            
+            boss_hps = []
+            if hasattr(maze_obj, 'bosses_group') and maze_obj.bosses_group:
+                boss_hps = maze_obj.bosses_group.bosses
+
+            # Yield the final maze with all elements placed and boss data
+            yield {'maze': maze_obj.maze, 'bosses': boss_hps}
             break # Exit the loop once a valid maze is created
 
 if __name__ == "__main__":
