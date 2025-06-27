@@ -175,6 +175,8 @@ class Maze:
         self.maze = []
         self.unique_path = []
         self.unique = False
+        self.start_pos = None
+        self.end_pos = None
         self.player_skills = self._set_player_skills()
 
     def _set_player_skills(self):
@@ -257,10 +259,40 @@ class Maze:
         # Start recursive division on the inner grid
         self._recursive_division(1, 1, height - 2, width - 2)
 
-        # Place Start and End points random on the maze wall
-        self.maze[random.randint(1, height - 2)][0] = 'S'
-        self.maze[random.randint(1, height - 2)][width - 1] = 'E'
+        # Find all valid locations on the boundary walls for Start/End points
+        top_wall, bottom_wall, left_wall, right_wall = [], [], [], []
+        # Top wall
+        for c in range(1, width - 1):
+            if self.maze[1][c] == '.': top_wall.append((0, c))
+        # Bottom wall
+        for c in range(1, width - 1):
+            if self.maze[height - 2][c] == '.': bottom_wall.append((height - 1, c))
+        # Left wall
+        for r in range(1, height - 1):
+            if self.maze[r][1] == '.': left_wall.append((r, 0))
+        # Right wall
+        for r in range(1, height - 1):
+            if self.maze[r][width - 2] == '.': right_wall.append((r, width - 1))
 
+        possible_walls = [wall for wall in [top_wall, bottom_wall, left_wall, right_wall] if wall]
+
+        # Pick two distinct random locations for Start and End from different walls
+        if len(possible_walls) >= 2:
+            wall1_list, wall2_list = random.sample(possible_walls, 2)
+            self.start_pos = random.choice(wall1_list)
+            self.end_pos = random.choice(wall2_list)
+        else:
+            # Fallback: if openings are only on one wall, or less than 2 total openings.
+            valid_wall_cells = [cell for wall in possible_walls for cell in wall]
+            if len(valid_wall_cells) >= 2:
+                self.start_pos, self.end_pos = random.sample(valid_wall_cells, 2)
+            else:
+                # Ultimate fallback for very small/unusual mazes
+                self.start_pos = (0, 1) if self.maze[1][1] == '.' else (1,0)
+                self.end_pos = (height - 1, width - 2)
+
+        self.maze[self.start_pos[0]][self.start_pos[1]] = 'S'
+        self.maze[self.end_pos[0]][self.end_pos[1]] = 'E'
 
     def place_elements(self):
         """Randomly places Gold, Traps, etc. on path cells."""
@@ -319,6 +351,14 @@ class Maze:
             locker = Locker(locker_id)
             self.lockers[(r, c)] = locker
 
+    def _get_adjacent_path_cell(self, r, c):
+        """Given a coordinate (r, c) on a wall, find the adjacent path cell."""
+        for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < self.height and 0 <= nc < self.width and self.maze[nr][nc] != '#':
+                return (nr, nc)
+        return None
+
     def _find_char(self, char):
         """
         Finds the first occurrence of a character in the maze.
@@ -336,18 +376,25 @@ class Maze:
         If a unique path is found, it is stored in self.unique_path.
         """
         self.unique_path = []
-        start = self._find_char('S')
-        end = self._find_char('E')
+        s_pos = self._find_char('S')
+        e_pos = self._find_char('E')
 
-        stack = [(start, [start])]  # Stack stores tuples of (current_node, path_to_current_node)
+        if not s_pos or not e_pos: return False
+
+        start_node = self._get_adjacent_path_cell(s_pos[0], s_pos[1])
+        end_node = self._get_adjacent_path_cell(e_pos[0], e_pos[1])
+
+        if not start_node or not end_node: return False
+
+        stack = [(start_node, [start_node])]
         paths_found = []
 
         while stack:
             current, path = stack.pop()
 
-            if current == end:
-                paths_found.append(path)
-                # If we find more than one path, we can stop early.
+            if current == end_node:
+                full_path = [s_pos] + path + [e_pos]
+                paths_found.append(full_path)
                 if len(paths_found) > 1:
                     self.unique_path = []
                     return False
