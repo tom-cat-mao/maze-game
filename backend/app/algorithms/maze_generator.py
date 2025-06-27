@@ -413,5 +413,8 @@ if __name__ == "__main__":
     for locker_pos, locker in maze_obj.lockers.items():
         print(f"Locker at {locker_pos}, ID: {locker.locker_id}, Password: {locker.password}, Tips: {locker.get_tips()}, Clues: {locker.clue.get_clues()}")
 
+    for boss_pos, boss_group in maze_obj.bosses.items():
+        print(f"Boss at {boss_pos}, HP: {boss_group.bosses}")
+
     json_saver(maze_obj)
     # print(f"Maze data saved to {path_file}")
