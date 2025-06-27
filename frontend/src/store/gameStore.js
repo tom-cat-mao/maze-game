@@ -16,6 +16,7 @@ export const useGameStore = defineStore('game', {
     gameWon: false,
     puzzleSolution: null,
     bossBattleResult: null,
+    playerSkills: null,
     bossHps: null,
     leverPuzzles: {},
     isGameActive: false,
@@ -34,6 +35,7 @@ export const useGameStore = defineStore('game', {
       this.gameWon = false;
       this.puzzleSolution = null;
       this.bossBattleResult = null;
+      this.playerSkills = null;
       this.bossHps = null;
       this.leverPuzzles = {};
 
@@ -176,6 +178,7 @@ export const useGameStore = defineStore('game', {
             {"name": "Quick Attack", "damage": 10, "cooldown": 0},
             {"name": "Heavy Slam", "damage": 25, "cooldown": 1},
         ];
+        this.playerSkills = skills; // Store skills so the UI can display them
         const response = await ApiService.solveBossBattle(this.bossHps, skills);
         this.bossBattleResult = response.data;
       } catch (err) {

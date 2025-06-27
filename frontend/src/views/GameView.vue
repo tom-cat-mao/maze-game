@@ -69,14 +69,38 @@
                         </div>
                     </div>
                     <div class="result-item" v-if="game.bossBattleResult">
-                        <h3>Boss Defeated!</h3>
-                        <p>Turns: {{ game.bossBattleResult.turns }}</p>
-                        <div class="boss-sequence-container">
-                            <span>Sequence:</span>
-                            <template v-for="(skill, index) in game.bossBattleResult.sequence" :key="index">
-                                <span class="skill-badge">{{ skill }}</span>
-                                <span v-if="index < game.bossBattleResult.sequence.length - 1" class="sequence-arrow">→</span>
-                            </template>
+                        <div class="battle-report">
+                            <h3>Boss Battle Report</h3>
+                            <div class="vs-container">
+                                <div class="vs-panel">
+                                    <strong>Your Skills</strong>
+                                    <div v-if="game.playerSkills" class="vs-items">
+                                        <span v-for="skill in game.playerSkills" :key="skill.name" class="skill-badge player">
+                                            {{ skill.name }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="vs-separator">VS</div>
+                                <div class="vs-panel">
+                                    <strong>Enemy Lineup</strong>
+                                    <div v-if="game.bossHps" class="vs-items">
+                                        <span v-for="(hp, index) in game.bossHps" :key="index" class="skill-badge enemy">
+                                            BOSS ({{ hp }} HP)
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="battle-log">
+                                <strong>Optimal Sequence:</strong>
+                                <ul class="log-list">
+                                    <li v-for="(skill, index) in game.bossBattleResult.sequence" :key="index">
+                                        Turn {{ index + 1 }}: Used <strong>{{ skill }}</strong>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="battle-summary">
+                                <strong>Total Turns to Win: <span class="value-player">{{ game.bossBattleResult.turns }}</span></strong>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -233,11 +257,70 @@ input {
     border: 1px solid #e9ecef;
 }
 
-.info-section h2 {
+.info-section h2, .battle-report h3 {
     margin-top: 0;
     border-bottom: 2px solid #007bff;
     padding-bottom: 5px;
     margin-bottom: 15px;
+}
+
+.battle-report h3 {
+    border-bottom-color: #dc3545;
+    text-align: center;
+}
+
+.vs-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.vs-panel {
+    flex: 1;
+}
+
+.vs-items {
+    margin-top: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+}
+
+.vs-separator {
+    font-size: 2em;
+    color: #dc3545;
+    font-weight: bold;
+    padding: 0 10px;
+}
+
+.battle-log {
+    margin-top: 15px;
+}
+
+.log-list {
+    list-style-type: none;
+    padding-left: 0;
+    font-family: 'Courier New', Courier, monospace;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 5px;
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+}
+
+.log-list li {
+    padding: 2px 0;
+}
+
+.battle-summary {
+    text-align: right;
+    margin-top: 10px;
+    font-weight: bold;
 }
 
 .result-item {
@@ -274,6 +357,15 @@ input {
     padding: 4px 10px;
     border-radius: 15px;
     font-size: 0.9em;
+    margin: 2px;
+}
+
+.skill-badge.player {
+    background-color: #007bff;
+}
+
+.skill-badge.enemy {
+    background-color: #6f42c1;
 }
 
 .sequence-arrow {
