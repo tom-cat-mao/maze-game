@@ -54,7 +54,7 @@ export const useGameStore = defineStore('game', {
                 const key = `${locker.position[0]},${locker.position[1]}`;
                 puzzles[key] = {
                     id: locker.id,
-                    constraints: locker.tips,
+                    constraints: locker.constraints,
                     password_hash: locker.password_hash,
                 };
             });

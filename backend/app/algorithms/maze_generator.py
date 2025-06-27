@@ -468,7 +468,7 @@ def generate_maze(width, height):
                 lockers_data.append({
                     'position': pos,
                     'id': locker.locker_id,
-                    'tips': locker.get_tips(),
+                    'constraints': locker.clue.get_clues(), # Use the randomly selected clues as the definitive constraints
                     'password_hash': locker.password_hash
                 })
 
