@@ -15,13 +15,15 @@ class PathfindingResponse(BaseModel):
     value: int
 
 class PuzzleRequest(BaseModel):
-    constraints: Dict[str, Any]
+    password_hash: str
+    constraints: List[Any]
 
 class PuzzleResponse(BaseModel):
     solution: List[int]
+    tries: int
 
 class BossBattleRequest(BaseModel):
-    boss_hp: int
+    boss_hps: List[int]
     skills: List[Dict[str, Any]]
 
 class BossBattleResponse(BaseModel):

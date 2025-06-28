@@ -14,52 +14,85 @@ export const useGameStore = defineStore('game', {
     playerPath: [],
     playerScore: 0,
     gameWon: false,
-    puzzleSolution: null,
+    activePuzzle: null, // New state for the current puzzle
     bossBattleResult: null,
+    playerSkills: null,
+    bossHps: null,
     leverPuzzles: {},
+    isGameActive: false,
   }),
   actions: {
     async generateMaze(size) {
+      this.isGameActive = true;
       this.isLoading = true;
       this.error = null;
-      this.mazeData = null;
+      this.mazeData = []; // Start with an empty maze for animation
       this.dpPath = null;
       this.greedyPath = null;
       this.playerPosition = null;
       this.playerPath = [];
       this.playerScore = 0;
       this.gameWon = false;
-      this.puzzleSolution = null;
+      this.activePuzzle = null;
       this.bossBattleResult = null;
+      this.playerSkills = null;
+      this.bossHps = null;
       this.leverPuzzles = {};
-      try {
-        const response = await ApiService.generateMaze(size);
-        this.mazeData = response.data.maze;
-        
-        // Find special tiles and configure them
-        const puzzleTypes = ["prime", "even", "odd"];
-        for (let r = 0; r < this.mazeData.length; r++) {
-          for (let c = 0; c < this.mazeData[r].length; c++) {
-            const cell = this.mazeData[r][c];
-            if (cell === 'S') {
-              this.playerPosition = { r, c };
-              this.playerPath.push([r, c]);
-            } else if (cell === 'L') {
-              // Assign a random puzzle to this lever
-              this.leverPuzzles[`${r},${c}`] = {
-                length: 3,
-                unique: Math.random() > 0.5,
-                type: puzzleTypes[Math.floor(Math.random() * puzzleTypes.length)],
-              };
-            }
-          }
+
+      const onData = (data) => {
+        if (data.maze) {
+            this.mazeData = data.maze;
         }
-      } catch (err) {
+        // Check if the final payload with boss data has arrived
+        if (data.bosses && data.bosses.length > 0) {
+            this.bossHps = data.bosses;
+        }
+        // Check for puzzle data
+        if (data.lockers) {
+            const puzzles = {};
+            data.lockers.forEach(locker => {
+                const key = `${locker.position[0]},${locker.position[1]}`;
+                puzzles[key] = {
+                    id: locker.id,
+                    constraints: locker.constraints,
+                    password_hash: locker.password_hash,
+                };
+            });
+            this.leverPuzzles = puzzles;
+        }
+        // Check for player skills
+        if (data.player_skills) {
+            this.playerSkills = data.player_skills.map((skill, index) => ({
+                name: `Skill ${index + 1}`, // Assign a generic name
+                damage: skill[0],
+                cooldown: skill[1],
+            }));
+        }
+      };
+
+      const onComplete = () => {
+        if (this.mazeData && this.mazeData.length > 0) {
+            for (let r = 0; r < this.mazeData.length; r++) {
+                for (let c = 0; c < this.mazeData[r].length; c++) {
+                    const cell = this.mazeData[r][c];
+                    if (cell === 'S') {
+                        this.playerPosition = { r, c };
+                        this.playerPath.push([r, c]);
+                    }
+                }
+            }
+        }
+        this.isLoading = false;
+      };
+      
+      const onError = (err) => {
         this.error = 'Failed to generate maze.';
         console.error(err);
-      } finally {
         this.isLoading = false;
-      }
+      };
+
+      // ApiService.generateMaze is now non-blocking and uses callbacks
+      ApiService.generateMaze(size, onData, onComplete, onError);
     },
     async solveDp() {
       if (!this.mazeData) return;
@@ -120,9 +153,11 @@ export const useGameStore = defineStore('game', {
         } else if (cell === 'L') {
           this.playerScore += 5;
           this.mazeData[newR][newC] = '.'; // Consume lever
-          const puzzleConstraints = this.leverPuzzles[`${newR},${newC}`];
-          if (puzzleConstraints) {
-            this.solvePuzzle(puzzleConstraints);
+          const puzzleData = this.leverPuzzles[`${newR},${newC}`];
+          if (puzzleData && puzzleData.constraints && puzzleData.password_hash) {
+            this.activePuzzle = { ...puzzleData, solution: null, tries: null };
+            // Automatically solve it for now, but the puzzle is now active
+            this.solvePuzzle();
           }
         } else if (cell === 'B') {
           this.playerScore += 10;
@@ -134,12 +169,14 @@ export const useGameStore = defineStore('game', {
         }
       }
     },
-    async solvePuzzle(constraints) {
+    async solvePuzzle() {
+      if (!this.activePuzzle) return;
+
       this.isLoading = true;
-      this.puzzleSolution = null; // Clear previous solution
       try {
-        const response = await ApiService.solvePuzzle(constraints);
-        this.puzzleSolution = response.data.solution;
+        const response = await ApiService.solvePuzzle(this.activePuzzle);
+        this.activePuzzle.solution = response.data.solution;
+        this.activePuzzle.tries = response.data.tries;
       } catch (err) {
         this.error = 'Failed to solve puzzle.';
         console.error(err);
@@ -148,14 +185,17 @@ export const useGameStore = defineStore('game', {
       }
     },
     async solveBossBattle() {
+      if (!this.bossHps || this.bossHps.length === 0) {
+        this.error = "No boss data available for this battle!";
+        return;
+      }
       this.isLoading = true;
       try {
-        const bossHp = 100;
-        const skills = [
-            {"name": "Quick Attack", "damage": 10, "cooldown": 0},
-            {"name": "Heavy Slam", "damage": 25, "cooldown": 1},
-        ];
-        const response = await ApiService.solveBossBattle(bossHp, skills);
+        if (!this.playerSkills || this.playerSkills.length === 0) {
+            this.error = "Player skills not available for boss battle!";
+            return;
+        }
+        const response = await ApiService.solveBossBattle(this.bossHps, this.playerSkills);
         this.bossBattleResult = response.data;
       } catch (err) {
         this.error = 'Failed to solve boss battle.';

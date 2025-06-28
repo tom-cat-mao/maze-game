@@ -1,7 +1,6 @@
 import random
 import time
 import hashlib
-import json
 
 class PasswordLock:
     def __init__(self):
@@ -89,30 +88,23 @@ class Locker:
         if len(set(password)) != len(password):
             unique_flag = False
 
-        for i, digit in enumerate(password):
+        for digit in password:
             if digit not in prime_numbers:
                 prime_flag = False
             if digit in even_numbers:
-                # Tips for even digit, e.g. [position, 0]. Position is 1-based.
-                self.tips.append([i + 1, 0])
+                # Tips for even digit, e.g. [position, 0]
+                self.tips.append([password.index(digit), 0])
             if digit in odd_numbers:
-                # Tips for odd digit, e.g. [position, 1]. Position is 1-based.
-                self.tips.append([i + 1, 1])
-        
-        # Add one random "digit reveal" constraint to make it more interesting
-        # instead of revealing all digits.
-        if password:
-            revealed_idx = random.randint(0, len(password) - 1)
-            mask = [-1] * len(password)
-            mask[revealed_idx] = password[revealed_idx]
+                # Tips for odd digit, e.g. [position, 1]
+                self.tips.append([password.index(digit), 1])
+            
+            mask = [-1, -1, -1]
+            digit_index = password.index(digit)
+            mask[digit_index] = digit
             self.tips.append(mask)
 
         if prime_flag:
-            self.tips.append([-1,-1])
-        
-        if unique_flag:
-            # Add a new constraint type to indicate uniqueness, e.g., [-2, -2]
-            self.tips.append([-2, -2])
+            self.tips.append([-1,-1])   
 
         return password
 
@@ -175,23 +167,6 @@ class Maze:
         self.maze = []
         self.unique_path = []
         self.unique = False
-        self.start_pos = None
-        self.end_pos = None
-        self.player_skills = self._set_player_skills()
-
-    def _set_player_skills(self):
-        """
-        Sets the player's skills for the maze game.
-        Skills are represented as a list of tuples (damage, cooldown).
-        """
-        skill_number = random.randint(1, 10)
-        skills = []
-        skills.append([3, 0])  # Add a default skill with no damage and no cooldown
-        for _ in range(skill_number):
-            damage = random.randint(1, 50)
-            cooldown = random.randint(1, 5)
-            skills.append([damage, cooldown])
-        return skills
 
     def _recursive_division(self, r, c, height, width):
         """
@@ -259,40 +234,10 @@ class Maze:
         # Start recursive division on the inner grid
         self._recursive_division(1, 1, height - 2, width - 2)
 
-        # Find all valid locations on the boundary walls for Start/End points
-        top_wall, bottom_wall, left_wall, right_wall = [], [], [], []
-        # Top wall
-        for c in range(1, width - 1):
-            if self.maze[1][c] == '.': top_wall.append((0, c))
-        # Bottom wall
-        for c in range(1, width - 1):
-            if self.maze[height - 2][c] == '.': bottom_wall.append((height - 1, c))
-        # Left wall
-        for r in range(1, height - 1):
-            if self.maze[r][1] == '.': left_wall.append((r, 0))
-        # Right wall
-        for r in range(1, height - 1):
-            if self.maze[r][width - 2] == '.': right_wall.append((r, width - 1))
+        # Place Start and End points
+        self.maze[1][1] = 'S'
+        self.maze[height - 2][width - 2] = 'E'
 
-        possible_walls = [wall for wall in [top_wall, bottom_wall, left_wall, right_wall] if wall]
-
-        # Pick two distinct random locations for Start and End from different walls
-        if len(possible_walls) >= 2:
-            wall1_list, wall2_list = random.sample(possible_walls, 2)
-            self.start_pos = random.choice(wall1_list)
-            self.end_pos = random.choice(wall2_list)
-        else:
-            # Fallback: if openings are only on one wall, or less than 2 total openings.
-            valid_wall_cells = [cell for wall in possible_walls for cell in wall]
-            if len(valid_wall_cells) >= 2:
-                self.start_pos, self.end_pos = random.sample(valid_wall_cells, 2)
-            else:
-                # Ultimate fallback for very small/unusual mazes
-                self.start_pos = (0, 1) if self.maze[1][1] == '.' else (1,0)
-                self.end_pos = (height - 1, width - 2)
-
-        self.maze[self.start_pos[0]][self.start_pos[1]] = 'S'
-        self.maze[self.end_pos[0]][self.end_pos[1]] = 'E'
 
     def place_elements(self):
         """Randomly places Gold, Traps, etc. on path cells."""
@@ -350,51 +295,25 @@ class Maze:
             self.locker_id.add(locker_id)
             locker = Locker(locker_id)
             self.lockers[(r, c)] = locker
-
-    def _get_adjacent_path_cell(self, r, c):
-        """Given a coordinate (r, c) on a wall, find the adjacent path cell."""
-        for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < self.height and 0 <= nc < self.width and self.maze[nr][nc] != '#':
-                return (nr, nc)
-        return None
-
-    def _find_char(self, char):
-        """
-        Finds the first occurrence of a character in the maze.
-        Returns the coordinates (row, column) of the character.
-        """
-        for r, row in enumerate(self.maze):
-            for c, val in enumerate(row):
-                if val == char:
-                    return (r, c)
-        return None
-
+        
     def unique_path_checker(self):
         """
         Check if the maze has a unique path from start to end using DFS.
         If a unique path is found, it is stored in self.unique_path.
         """
         self.unique_path = []
-        s_pos = self._find_char('S')
-        e_pos = self._find_char('E')
-
-        if not s_pos or not e_pos: return False
-
-        start_node = self._get_adjacent_path_cell(s_pos[0], s_pos[1])
-        end_node = self._get_adjacent_path_cell(e_pos[0], e_pos[1])
-
-        if not start_node or not end_node: return False
-
-        stack = [(start_node, [start_node])]
+        start = (1, 1)
+        end = (self.height - 2, self.width - 2)
+        
+        stack = [(start, [start])]  # Stack stores tuples of (current_node, path_to_current_node)
         paths_found = []
 
         while stack:
             current, path = stack.pop()
 
-            if current == end_node:
-                full_path = [s_pos] + path + [e_pos]
-                paths_found.append(full_path)
+            if current == end:
+                paths_found.append(path)
+                # If we find more than one path, we can stop early.
                 if len(paths_found) > 1:
                     self.unique_path = []
                     return False
@@ -418,30 +337,6 @@ class Maze:
 
         return False
 
-def json_saver(maze_obj):
-    """
-    Saves the maze object to a JSON file.
-    """
-    """
-    json style:
-    {
-        "width": 15,
-        "height": 15,
-        "maze": [
-            ["#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#"],
-            ["#", "S", ".", ".", "#", "L", "#", ".", ".", "#", ".", "#", ".", "#", ".", "#", "."],
-            ["#", "L", "#", "#", "#", ".", "#", ".", "#", "." ... ]}"""
-
-    path_file = "file_path.json"
-    maze_data = {
-        "width": maze_obj.width,
-        "height": maze_obj.height,
-        "maze": maze_obj.maze,
-    }
-
-    with open(path_file, 'w') as f:
-        json.dump(maze_data, f, indent=4)
-    print(f"Maze data saved to {path_file}")
 
 def generate_maze(width, height):
     """
@@ -453,32 +348,13 @@ def generate_maze(width, height):
         maze_obj = Maze(width, height)
         maze_obj.generate_maze()
         # Yield the maze after the basic structure is generated
-        yield {'maze': maze_obj.maze}
+        yield maze_obj.maze
         
         if maze_obj.unique_path_checker():
             # Yield the maze with a guaranteed unique path
             maze_obj.place_elements()
-            
-            boss_hps = []
-            if hasattr(maze_obj, 'bosses_group') and maze_obj.bosses_group:
-                boss_hps = maze_obj.bosses_group.bosses
-            
-            lockers_data = []
-            for pos, locker in maze_obj.lockers.items():
-                lockers_data.append({
-                    'position': pos,
-                    'id': locker.locker_id,
-                    'constraints': locker.clue.get_clues(), # Use the randomly selected clues as the definitive constraints
-                    'password_hash': locker.password_hash
-                })
-
-            # Yield the final maze with all elements placed and boss data
-            yield {
-                'maze': maze_obj.maze,
-                'bosses': boss_hps,
-                'lockers': lockers_data,
-                'player_skills': maze_obj.player_skills
-            }
+            # Yield the final maze with all elements placed
+            yield maze_obj.maze
             break # Exit the loop once a valid maze is created
 
 if __name__ == "__main__":
@@ -510,14 +386,4 @@ if __name__ == "__main__":
 
     # Check the lockers and their tips
     for locker_pos, locker in maze_obj.lockers.items():
-        print(f"Locker at {locker_pos}, ID: {locker.locker_id}, Password: {locker.password}, Tips: {locker.get_tips()}, Clues: {locker.clue.get_clues()}")
-
-    for boss_pos, boss_group in maze_obj.bosses.items():
-        print(f"Boss at {boss_pos}, HP: {boss_group.bosses}")
-
-    print(f"Skills: {maze_obj.player_skills}")
-    for skill in maze_obj.player_skills:
-        print(f"Player Skill - Damage: {skill[0]}, Cooldown: {skill[1]}")
-    
-    json_saver(maze_obj)
-    # print(f"Maze data saved to {path_file}")
+        print(f"Locker at {locker_pos}, ID: {locker.locker_id}, Tips: {locker.get_tips()}, Clues: {locker.clue.get_clues()}")
