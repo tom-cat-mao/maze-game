@@ -477,7 +477,8 @@ def generate_maze(width, height):
                 'maze': maze_obj.maze,
                 'bosses': boss_hps,
                 'lockers': lockers_data,
-                'player_skills': maze_obj.player_skills
+                'player_skills': maze_obj.player_skills,
+                'unique_path': maze_obj.unique_path,
             }
             break # Exit the loop once a valid maze is created
 

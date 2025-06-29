@@ -4,6 +4,7 @@ import ApiService from '../services/ApiService';
 export const useGameStore = defineStore('game', {
   state: () => ({
     mazeData: null,
+    uniquePath: null, // To store the unique path from the generator
     dpPath: null,
     dpValue: 0,
     greedyPath: null,
@@ -29,6 +30,7 @@ export const useGameStore = defineStore('game', {
       this.mazeData = []; // Start with an empty maze for animation
       this.dpPath = null;
       this.greedyPath = null;
+      this.uniquePath = null;
       this.playerPosition = null;
       this.playerPath = [];
       this.playerScore = 0;
@@ -68,6 +70,9 @@ export const useGameStore = defineStore('game', {
                 cooldown: skill[1],
             }));
         }
+        if (data.unique_path) {
+          this.uniquePath = data.unique_path;
+        }
       };
 
       const onComplete = () => {
@@ -99,7 +104,11 @@ export const useGameStore = defineStore('game', {
       this.isLoading = true;
       this.error = null;
       try {
-        const response = await ApiService.solveDp(this.mazeData);
+        const payload = {
+          maze: this.mazeData,
+          main_path: this.uniquePath, // Pass the unique path to the API
+        };
+        const response = await ApiService.solveDp(payload);
         this.dpPath = response.data.path;
         this.dpValue = response.data.value;
       } catch (err) {
