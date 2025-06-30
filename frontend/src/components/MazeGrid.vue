@@ -17,7 +17,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
   maze: {
@@ -42,13 +42,40 @@ const gridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${props.maze?.[0]?.length || 10}, 30px)`,
 }));
 
+const animatedDpPath = ref([]);
+const animatedGreedyPath = ref([]);
+
+const animatePath = (newPath, animatedPath) => {
+  animatedPath.value = [];
+  if (!newPath || newPath.length === 0) return;
+
+  let index = 0;
+  const interval = setInterval(() => {
+    if (index < newPath.length) {
+      animatedPath.value.push(newPath[index]);
+      index++;
+    } else {
+      clearInterval(interval);
+    }
+  }, 50); // Adjust timing for animation speed
+};
+
+watch(() => props.dpPath, (newPath) => {
+  animatePath(newPath, animatedDpPath);
+}, { deep: true });
+
+watch(() => props.greedyPath, (newPath) => {
+  animatePath(newPath, animatedGreedyPath);
+}, { deep: true });
+
+
 const isPath = (path, x, y) => {
   return path && path.some(p => p[0] === y && p[1] === x);
 };
 
 const getCellClass = (cell, x, y) => {
-  const onDpPath = isPath(props.dpPath, x, y);
-  const onGreedyPath = isPath(props.greedyPath, x, y);
+  const onDpPath = isPath(animatedDpPath.value, x, y);
+  const onGreedyPath = isPath(animatedGreedyPath.value, x, y);
   const isPlayer = props.playerPosition && props.playerPosition.r === y && props.playerPosition.c === x;
 
   return {
@@ -112,6 +139,7 @@ const getCellContent = (cell) => {
   align-items: center;
   font-size: 1.2em;
   box-sizing: border-box;
+  transition: background-color 0.3s ease;
 }
 
 .wall { background-color: #333; }
