@@ -196,12 +196,12 @@ class Maze:
     def _recursive_division(self, r, c, height, width):
         """
         Recursively divides a chamber of the maze with a wall and a passage.
+        This is now a generator that yields the maze state after each modification.
         (r, c) is the top-left corner of the chamber.
         """
         if width <= 1 or height <= 1:
             return
 
-        # Determine orientation of the wall to be added
         if width < height:
             orientation = 'HORIZONTAL'
         elif height < width:
@@ -210,56 +210,48 @@ class Maze:
             orientation = random.choice(['HORIZONTAL', 'VERTICAL'])
 
         if orientation == 'HORIZONTAL':
-            # Row for the wall (must be an even index)
             wall_r = r + random.randrange(1, height, 2)
-            # Column for the passage (must be an odd index to be a path)
             passage_c = c + random.randrange(0, width, 2)
-
             for i in range(c, c + width):
                 self.maze[wall_r][i] = '#'
             self.maze[wall_r][passage_c] = '.'
+            yield self.maze # Yield after drawing the wall and passage
 
-            # Recurse on the two new sub-chambers
-            self._recursive_division(r, c, wall_r - r, width)
-            self._recursive_division(wall_r + 1, c, r + height - (wall_r + 1), width)
+            yield from self._recursive_division(r, c, wall_r - r, width)
+            yield from self._recursive_division(wall_r + 1, c, r + height - (wall_r + 1), width)
 
         else:  # VERTICAL
-            # Column for the wall (must be an even index)
             wall_c = c + random.randrange(1, width, 2)
-            # Row for the passage (must be an odd index to be a path)
             passage_r = r + random.randrange(0, height, 2)
-
             for i in range(r, r + height):
                 self.maze[i][wall_c] = '#'
             self.maze[passage_r][wall_c] = '.'
+            yield self.maze # Yield after drawing the wall and passage
 
-            # Recurse on the two new sub-chambers
-            self._recursive_division(r, c, height, wall_c - c)
-            self._recursive_division(r, wall_c + 1, height, c + width - (wall_c + 1))
-
+            yield from self._recursive_division(r, c, height, wall_c - c)
+            yield from self._recursive_division(r, wall_c + 1, height, c + width - (wall_c + 1))
 
     def generate_maze(self):
         """
         Generates a maze using the Recursive Division algorithm.
+        This is now a generator that yields the maze at each step of its creation.
         '#' = wall, '.' = path
         """
         width = self.width
         height = self.height
-        # Initialize maze with open paths
         self.maze = [['.' for _ in range(width)] for _ in range(height)]
+        yield self.maze # Initial empty grid
 
-        # Add boundary walls
         for c in range(width):
             self.maze[0][c] = '#'
             self.maze[height - 1][c] = '#'
         for r in range(height):
             self.maze[r][0] = '#'
             self.maze[r][width - 1] = '#'
+        yield self.maze # With boundary walls
 
-        # Start recursive division on the inner grid
-        self._recursive_division(1, 1, height - 2, width - 2)
+        yield from self._recursive_division(1, 1, height - 2, width - 2)
 
-        # Find all valid locations on the boundary walls for Start/End points
         top_wall, bottom_wall, left_wall, right_wall = [], [], [], []
         # Top wall
         for c in range(1, width - 1):
@@ -451,9 +443,10 @@ def generate_maze(width, height):
     """
     while True:
         maze_obj = Maze(width, height)
-        maze_obj.generate_maze()
-        # Yield the maze after the basic structure is generated
-        yield {'maze': maze_obj.maze}
+        # The generate_maze method is now a generator itself.
+        # We iterate through it to yield each step of the wall generation.
+        for maze_state in maze_obj.generate_maze():
+            yield {'maze': maze_state}
         
         if maze_obj.unique_path_checker():
             # Yield the maze with a guaranteed unique path
