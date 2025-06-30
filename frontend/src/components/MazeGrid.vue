@@ -44,28 +44,39 @@ const gridStyle = computed(() => ({
 
 const animatedDpPath = ref([]);
 const animatedGreedyPath = ref([]);
+const dpIntervalId = ref(null);
+const greedyIntervalId = ref(null);
 
-const animatePath = (newPath, animatedPath) => {
+const animatePath = (newPath, animatedPath, intervalIdRef) => {
+  // Clear any existing animation for this path
+  if (intervalIdRef.value) {
+    clearInterval(intervalIdRef.value);
+    intervalIdRef.value = null;
+  }
+
   animatedPath.value = [];
-  if (!newPath || newPath.length === 0) return;
+  if (!newPath || newPath.length === 0) {
+    return; // Exit if the new path is empty or null
+  }
 
   let index = 0;
-  const interval = setInterval(() => {
+  intervalIdRef.value = setInterval(() => {
     if (index < newPath.length) {
       animatedPath.value.push(newPath[index]);
       index++;
     } else {
-      clearInterval(interval);
+      clearInterval(intervalIdRef.value);
+      intervalIdRef.value = null;
     }
   }, 50); // Adjust timing for animation speed
 };
 
 watch(() => props.dpPath, (newPath) => {
-  animatePath(newPath, animatedDpPath);
+  animatePath(newPath, animatedDpPath, dpIntervalId);
 }, { deep: true });
 
 watch(() => props.greedyPath, (newPath) => {
-  animatePath(newPath, animatedGreedyPath);
+  animatePath(newPath, animatedGreedyPath, greedyIntervalId);
 }, { deep: true });
 
 
