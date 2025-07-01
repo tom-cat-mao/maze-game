@@ -4,6 +4,7 @@ import ApiService from '../services/ApiService';
 export const useGameStore = defineStore('game', {
   state: () => ({
     mazeData: null,
+    uniquePath: null, // To store the unique path from the generator
     dpPath: null,
     dpValue: 0,
     greedyPath: null,
@@ -29,6 +30,7 @@ export const useGameStore = defineStore('game', {
       this.mazeData = []; // Start with an empty maze for animation
       this.dpPath = null;
       this.greedyPath = null;
+      this.uniquePath = null;
       this.playerPosition = null;
       this.playerPath = [];
       this.playerScore = 0;
@@ -38,51 +40,78 @@ export const useGameStore = defineStore('game', {
       this.playerSkills = null;
       this.bossHps = null;
       this.leverPuzzles = {};
+      
+      const mazeQueue = [];
+      let isProcessingQueue = false;
+
+      const processQueue = () => {
+        if (mazeQueue.length === 0) {
+          isProcessingQueue = false;
+          return;
+        }
+        isProcessingQueue = true;
+        const data = mazeQueue.shift();
+        
+        if (data.maze) {
+          this.mazeData = data.maze;
+        }
+        if (data.bosses && data.bosses.length > 0) {
+          this.bossHps = data.bosses;
+        }
+        if (data.lockers) {
+          const puzzles = {};
+          data.lockers.forEach(locker => {
+            const key = `${locker.position[0]},${locker.position[1]}`;
+            puzzles[key] = {
+              id: locker.id,
+              constraints: locker.constraints,
+              password_hash: locker.password_hash,
+            };
+          });
+          this.leverPuzzles = puzzles;
+        }
+        if (data.player_skills) {
+          this.playerSkills = data.player_skills.map((skill, index) => ({
+            name: `Skill ${index + 1}`,
+            damage: skill[0],
+            cooldown: skill[1],
+          }));
+        }
+        if (data.unique_path) {
+          this.uniquePath = data.unique_path;
+        }
+        
+        setTimeout(processQueue, 100); // Process next item after 100ms
+      };
 
       const onData = (data) => {
-        if (data.maze) {
-            this.mazeData = data.maze;
-        }
-        // Check if the final payload with boss data has arrived
-        if (data.bosses && data.bosses.length > 0) {
-            this.bossHps = data.bosses;
-        }
-        // Check for puzzle data
-        if (data.lockers) {
-            const puzzles = {};
-            data.lockers.forEach(locker => {
-                const key = `${locker.position[0]},${locker.position[1]}`;
-                puzzles[key] = {
-                    id: locker.id,
-                    constraints: locker.constraints,
-                    password_hash: locker.password_hash,
-                };
-            });
-            this.leverPuzzles = puzzles;
-        }
-        // Check for player skills
-        if (data.player_skills) {
-            this.playerSkills = data.player_skills.map((skill, index) => ({
-                name: `Skill ${index + 1}`, // Assign a generic name
-                damage: skill[0],
-                cooldown: skill[1],
-            }));
+        mazeQueue.push(data);
+        if (!isProcessingQueue) {
+          processQueue();
         }
       };
 
       const onComplete = () => {
-        if (this.mazeData && this.mazeData.length > 0) {
-            for (let r = 0; r < this.mazeData.length; r++) {
-                for (let c = 0; c < this.mazeData[r].length; c++) {
-                    const cell = this.mazeData[r][c];
-                    if (cell === 'S') {
-                        this.playerPosition = { r, c };
-                        this.playerPath.push([r, c]);
-                    }
-                }
-            }
-        }
-        this.isLoading = false;
+        const finalizer = () => {
+          if (isProcessingQueue) {
+            // Wait until the queue is empty
+            setTimeout(finalizer, 100);
+            return;
+          }
+          if (this.mazeData && this.mazeData.length > 0) {
+              for (let r = 0; r < this.mazeData.length; r++) {
+                  for (let c = 0; c < this.mazeData[r].length; c++) {
+                      const cell = this.mazeData[r][c];
+                      if (cell === 'S') {
+                          this.playerPosition = { r, c };
+                          this.playerPath.push([r, c]);
+                      }
+                  }
+              }
+          }
+          this.isLoading = false;
+        };
+        finalizer();
       };
       
       const onError = (err) => {
@@ -99,7 +128,11 @@ export const useGameStore = defineStore('game', {
       this.isLoading = true;
       this.error = null;
       try {
-        const response = await ApiService.solveDp(this.mazeData);
+        const payload = {
+          maze: this.mazeData,
+          main_path: this.uniquePath, // Pass the unique path to the API
+        };
+        const response = await ApiService.solveDp(payload);
         this.dpPath = response.data.path;
         this.dpValue = response.data.value;
       } catch (err) {

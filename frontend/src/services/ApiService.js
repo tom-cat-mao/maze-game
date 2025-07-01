@@ -58,8 +58,8 @@ export default {
       console.error('Failed to generate maze:', err);
     }
   },
-  solveDp(maze) {
-    return apiClient.post('/solve/dp', { maze });
+  solveDp(payload) {
+    return apiClient.post('/solve/dp', payload);
   },
   solveGreedy(maze) {
     return apiClient.post('/solve/greedy', { maze });

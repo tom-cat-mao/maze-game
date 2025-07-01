@@ -7,26 +7,35 @@ SCORE_MAP = {'G': 10, 'T': -5, 'S': 0, 'E': 0, '.': 0, 'B':0, 'L':0}
 MOVE_COST = 0 # As per user request, movement has no cost.
 
 # --- Logging Setup ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def solve_with_dp(maze):
+def solve_with_dp(maze, main_path=None):
     """
     Solves the maze using a Tree-based Dynamic Programming approach.
     The maze is treated as a tree structure with a main path (S to E) and side branches.
     The algorithm finds the path with the maximum possible score.
+    It can accept a pre-calculated main_path to avoid redundant calculations.
     """
     height = len(maze)
     width = len(maze[0])
 
     # 1. Pre-processing: Build graph and find main path
     graph = _build_graph(maze, height, width)
-    start_node = _find_char(maze, 'S')
-    end_node = _find_char(maze, 'E')
     
-    main_path = _find_shortest_path_bfs(graph, start_node, end_node)
-    if not main_path:
-        logging.warning("No path found from S to E.")
-        return [], 0
+    if main_path is None:
+        # logging.info("No main_path provided, calculating it using BFS...")
+        start_node_pos = _find_char(maze, 'S')
+        end_node_pos = _find_char(maze, 'E')
+        main_path = _find_shortest_path_bfs(graph, start_node_pos, end_node_pos)
+        if not main_path:
+            # logging.warning("No path found from S to E.")
+            return [], 0
+    else:
+        # logging.info("Using pre-calculated main_path.")
+        # Ensure all coordinates in the path are tuples for hashability
+        main_path = [tuple(p) for p in main_path]
+
+    start_node = tuple(main_path[0])
         
     main_path_set = set(main_path)
     
@@ -67,7 +76,7 @@ def solve_with_dp(maze):
         memo_to_e[current_node] = current_score + side_branch_profit + next_node_score
 
     # 3. Path Reconstruction
-    logging.info(f"Path Decision Memo: {path_decision_memo}")
+    # logging.info(f"Path Decision Memo: {path_decision_memo}")
     final_path = _reconstruct_path(start_node, main_path, graph, path_decision_memo)
     max_score = memo_to_e.get(start_node, 0)
 
@@ -121,10 +130,10 @@ def _reconstruct_path(start_node, main_path, graph, path_decision_memo):
         # The decisions for branches off the main path are stored in the DP calculation
         # for the main path nodes themselves.
         decisions = path_decision_memo.get(current_node, {})
-        logging.info(f"Reconstructing at {current_node}, decisions: {decisions}")
+        # logging.info(f"Reconstructing at {current_node}, decisions: {decisions}")
         for neighbor, should_explore in decisions.items():
             if should_explore:
-                logging.info(f"  -> Exploring branch at {neighbor}")
+                # logging.info(f"  -> Exploring branch at {neighbor}")
                 # This neighbor is the root of a profitable side branch.
                 branch_excursion = _build_branch_excursion(neighbor, current_node, graph, path_decision_memo)
                 final_path.extend(branch_excursion)

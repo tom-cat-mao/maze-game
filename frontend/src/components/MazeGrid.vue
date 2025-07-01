@@ -17,7 +17,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
   maze: {
@@ -42,13 +42,51 @@ const gridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${props.maze?.[0]?.length || 10}, 30px)`,
 }));
 
+const animatedDpPath = ref([]);
+const animatedGreedyPath = ref([]);
+const dpIntervalId = ref(null);
+const greedyIntervalId = ref(null);
+
+const animatePath = (newPath, animatedPath, intervalIdRef) => {
+  // Clear any existing animation for this path
+  if (intervalIdRef.value) {
+    clearInterval(intervalIdRef.value);
+    intervalIdRef.value = null;
+  }
+
+  animatedPath.value = [];
+  if (!newPath || newPath.length === 0) {
+    return; // Exit if the new path is empty or null
+  }
+
+  let index = 0;
+  intervalIdRef.value = setInterval(() => {
+    if (index < newPath.length) {
+      animatedPath.value.push(newPath[index]);
+      index++;
+    } else {
+      clearInterval(intervalIdRef.value);
+      intervalIdRef.value = null;
+    }
+  }, 50); // Adjust timing for animation speed
+};
+
+watch(() => props.dpPath, (newPath) => {
+  animatePath(newPath, animatedDpPath, dpIntervalId);
+}, { deep: true });
+
+watch(() => props.greedyPath, (newPath) => {
+  animatePath(newPath, animatedGreedyPath, greedyIntervalId);
+}, { deep: true });
+
+
 const isPath = (path, x, y) => {
   return path && path.some(p => p[0] === y && p[1] === x);
 };
 
 const getCellClass = (cell, x, y) => {
-  const onDpPath = isPath(props.dpPath, x, y);
-  const onGreedyPath = isPath(props.greedyPath, x, y);
+  const onDpPath = isPath(animatedDpPath.value, x, y);
+  const onGreedyPath = isPath(animatedGreedyPath.value, x, y);
   const isPlayer = props.playerPosition && props.playerPosition.r === y && props.playerPosition.c === x;
 
   return {
@@ -112,6 +150,7 @@ const getCellContent = (cell) => {
   align-items: center;
   font-size: 1.2em;
   box-sizing: border-box;
+  transition: background-color 0.3s ease;
 }
 
 .wall { background-color: #333; }

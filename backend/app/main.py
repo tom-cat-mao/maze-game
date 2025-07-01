@@ -1,6 +1,10 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import endpoints as v1_endpoints
+
+# Suppress Uvicorn access logs
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 app = FastAPI(title="Maze Adventure Game API")
 

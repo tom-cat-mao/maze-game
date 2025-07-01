@@ -7,8 +7,11 @@ class MazeGenerationRequest(BaseModel):
 class MazeSchema(BaseModel):
     maze: List[List[str]]
 
+from typing import Optional
+
 class PathfindingRequest(BaseModel):
     maze: List[List[str]]
+    main_path: Optional[List[List[int]]] = None
 
 class PathfindingResponse(BaseModel):
     path: List[List[int]]

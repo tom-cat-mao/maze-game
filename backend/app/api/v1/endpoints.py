@@ -37,9 +37,11 @@ async def generate_maze_endpoint(request: MazeGenerationRequest):
 def solve_dp_endpoint(request: PathfindingRequest):
     """
     Solves the maze using Dynamic Programming.
+    It can accept a pre-calculated main_path to optimize performance.
     """
     try:
-        path, value = solve_with_dp(request.maze)
+        # Pass the main_path to the solver if it exists in the request
+        path, value = solve_with_dp(request.maze, request.main_path)
         return {"path": path, "value": value}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
