@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # --- Constants ---
 # Mapping from maze characters to their values/penalties
-VALUE_MAP = {'G': 10, 'T': -5, 'S': 0, 'E': 0, '.': 0, 'B': 0, 'L': 0}
+VALUE_MAP = {'G': 50, 'T': -30, 'S': 0, 'E': 0, '.': 0, 'B': 0, 'L': 0}
 
 class MazeGreedyNavigator:
     """
