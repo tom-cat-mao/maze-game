@@ -22,10 +22,14 @@
 
     <div class="file-load-area">
       <p>Load a level from a JSON file.</p>
-      <input type="file" @change="onFileChange" accept=".json" />
-      <button @click="handleLoadFile" :disabled="!selectedFile || loading" class="load-file-btn">
-        Load from File
-      </button>
+      <div class="file-input-wrapper">
+        <input type="file" id="file-upload" @change="onFileChange" accept=".json" class="file-input-hidden" />
+        <label for="file-upload" class="file-upload-label">Browse...</label>
+        <span v-if="selectedFile" class="file-name">{{ selectedFile.name }}</span>
+        <button @click="handleLoadFile" :disabled="!selectedFile || loading" class="load-file-btn">
+          Load from File
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -108,9 +112,50 @@ const handleLoadFile = () => {
   margin-bottom: 10px;
 }
 
-.load-file-btn {
-  margin-left: 10px;
+.file-input-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.file-upload-label {
   background-color: #007bff;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  white-space: nowrap;
+}
+
+.file-upload-label:hover {
+  background-color: #0056b3;
+}
+
+.file-name {
+  font-style: italic;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.load-file-btn {
+  background-color: #007bff;
+  padding: 10px 15px;
+  border: none;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  white-space: nowrap;
 }
 
 .load-file-btn:hover:not(:disabled) {
