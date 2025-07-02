@@ -195,7 +195,6 @@ export const useGameStore = defineStore('game', {
           this.mazeData[newR][newC] = '.'; // Consume boss
           this.solveBossBattle();
         } else if (cell === 'E') {
-          this.playerScore += 5;
           this.gameWon = true;
         }
       }
