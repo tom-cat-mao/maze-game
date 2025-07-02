@@ -235,6 +235,84 @@ export const useGameStore = defineStore('game', {
       } finally {
         this.isLoading = false;
       }
-    }
+    },
+    async loadMazeFromFile(file) {
+      this.isLoading = true;
+      this.error = null;
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+
+          // Basic validation
+          if (!data.maze || !data.B || !data.PlayerSkills || !data.C || !data.L) {
+            throw new Error("Invalid or incomplete JSON file format.");
+          }
+
+          // Reset state
+          this.dpPath = null;
+          this.greedyPath = null;
+          this.uniquePath = null;
+          this.playerPath = [];
+          this.playerScore = 0;
+          this.gameWon = false;
+          this.activePuzzle = null;
+          this.bossBattleResult = null;
+
+          // Load data from JSON
+          this.mazeData = data.maze;
+          this.bossHps = data.B;
+          this.playerSkills = data.PlayerSkills.map((skill, index) => ({
+            name: `Skill ${index + 1}`,
+            damage: skill[0],
+            cooldown: skill[1],
+          }));
+
+          // Find puzzle and player start position
+          const puzzles = {};
+          let startPos = null;
+          for (let r = 0; r < data.maze.length; r++) {
+            for (let c = 0; c < data.maze[r].length; c++) {
+              if (data.maze[r][c] === 'L') {
+                const key = `${r},${c}`;
+                puzzles[key] = {
+                  id: `puzzle_${r}_${c}`,
+                  constraints: data.C,
+                  password_hash: data.L,
+                };
+              }
+              if (data.maze[r][c] === 'S') {
+                startPos = { r, c };
+              }
+            }
+          }
+          this.leverPuzzles = puzzles;
+
+          if (startPos) {
+            this.playerPosition = startPos;
+            this.playerPath.push([startPos.r, startPos.c]);
+          } else {
+            throw new Error("No start position 'S' found in the maze.");
+          }
+
+          this.isGameActive = true;
+        } catch (err) {
+          this.error = `Failed to load file: ${err.message}`;
+          console.error(err);
+          this.isGameActive = false;
+        } finally {
+          this.isLoading = false;
+        }
+      };
+
+      reader.onerror = (err) => {
+        this.error = 'Failed to read file.';
+        console.error(err);
+        this.isLoading = false;
+      };
+
+      reader.readAsText(file);
+    },
   },
 });

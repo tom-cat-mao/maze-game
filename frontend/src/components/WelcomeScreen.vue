@@ -15,17 +15,44 @@
     </div>
     <button @click="$emit('startGame')" class="start-game-btn">
       <span v-if="loading">Loading...</span>
-      <span v-else>Start Game</span>
+      <span v-else>Generate New Maze</span>
     </button>
+
+    <div class="divider">OR</div>
+
+    <div class="file-load-area">
+      <p>Load a level from a JSON file.</p>
+      <input type="file" @change="onFileChange" accept=".json" />
+      <button @click="handleLoadFile" :disabled="!selectedFile || loading" class="load-file-btn">
+        Load from File
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
+
 defineProps({
   modelValue: Number,
   loading: Boolean,
 });
-defineEmits(['update:modelValue', 'startGame']);
+const emit = defineEmits(['update:modelValue', 'startGame', 'loadFile']);
+
+const selectedFile = ref(null);
+
+const onFileChange = (e) => {
+  const files = e.target.files;
+  if (files.length > 0) {
+    selectedFile.value = files[0];
+  }
+};
+
+const handleLoadFile = () => {
+  if (selectedFile.value) {
+    emit('loadFile', selectedFile.value);
+  }
+};
 </script>
 
 <style scoped>
@@ -63,5 +90,35 @@ defineEmits(['update:modelValue', 'startGame']);
 
 .start-game-btn:hover {
   background-color: #218838;
+}
+
+.divider {
+  margin: 20px 0;
+  font-weight: bold;
+  color: #666;
+}
+
+.file-load-area {
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+.file-load-area p {
+  margin-bottom: 10px;
+}
+
+.load-file-btn {
+  margin-left: 10px;
+  background-color: #007bff;
+}
+
+.load-file-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 </style>
