@@ -178,13 +178,12 @@ export const useGameStore = defineStore('game', {
         
         const cell = this.mazeData[newR][newC];
         if (cell === 'G') {
-          this.playerScore += 10;
+          this.playerScore += 50;
           this.mazeData[newR][newC] = '.'; // Consume gold
         } else if (cell === 'T') {
-          this.playerScore -= 5;
+          this.playerScore -= 30;
           this.mazeData[newR][newC] = '.'; // Consume trap
         } else if (cell === 'L') {
-          this.playerScore += 5;
           this.mazeData[newR][newC] = '.'; // Consume lever
           const puzzleData = this.leverPuzzles[`${newR},${newC}`];
           if (puzzleData && puzzleData.constraints && puzzleData.password_hash) {
@@ -193,7 +192,6 @@ export const useGameStore = defineStore('game', {
             this.solvePuzzle();
           }
         } else if (cell === 'B') {
-          this.playerScore += 10;
           this.mazeData[newR][newC] = '.'; // Consume boss
           this.solveBossBattle();
         } else if (cell === 'E') {
@@ -210,6 +208,7 @@ export const useGameStore = defineStore('game', {
         const response = await ApiService.solvePuzzle(this.activePuzzle);
         this.activePuzzle.solution = response.data.solution;
         this.activePuzzle.tries = response.data.tries;
+        this.playerScore -= response.data.tries;
       } catch (err) {
         this.error = 'Failed to solve puzzle.';
         console.error(err);
@@ -230,6 +229,7 @@ export const useGameStore = defineStore('game', {
         }
         const response = await ApiService.solveBossBattle(this.bossHps, this.playerSkills);
         this.bossBattleResult = response.data;
+        this.playerScore -= response.data.turns;
       } catch (err) {
         this.error = 'Failed to solve boss battle.';
         console.error(err);
