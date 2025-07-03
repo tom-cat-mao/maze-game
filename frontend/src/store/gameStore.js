@@ -178,13 +178,12 @@ export const useGameStore = defineStore('game', {
         
         const cell = this.mazeData[newR][newC];
         if (cell === 'G') {
-          this.playerScore += 10;
+          this.playerScore += 50;
           this.mazeData[newR][newC] = '.'; // Consume gold
         } else if (cell === 'T') {
-          this.playerScore -= 5;
+          this.playerScore -= 30;
           this.mazeData[newR][newC] = '.'; // Consume trap
         } else if (cell === 'L') {
-          this.playerScore += 5;
           this.mazeData[newR][newC] = '.'; // Consume lever
           const puzzleData = this.leverPuzzles[`${newR},${newC}`];
           if (puzzleData && puzzleData.constraints && puzzleData.password_hash) {
@@ -193,11 +192,9 @@ export const useGameStore = defineStore('game', {
             this.solvePuzzle();
           }
         } else if (cell === 'B') {
-          this.playerScore += 10;
           this.mazeData[newR][newC] = '.'; // Consume boss
           this.solveBossBattle();
         } else if (cell === 'E') {
-          this.playerScore += 5;
           this.gameWon = true;
         }
       }
@@ -210,6 +207,7 @@ export const useGameStore = defineStore('game', {
         const response = await ApiService.solvePuzzle(this.activePuzzle);
         this.activePuzzle.solution = response.data.solution;
         this.activePuzzle.tries = response.data.tries;
+        this.playerScore -= response.data.tries;
       } catch (err) {
         this.error = 'Failed to solve puzzle.';
         console.error(err);
@@ -230,12 +228,91 @@ export const useGameStore = defineStore('game', {
         }
         const response = await ApiService.solveBossBattle(this.bossHps, this.playerSkills);
         this.bossBattleResult = response.data;
+        this.playerScore -= response.data.turns;
       } catch (err) {
         this.error = 'Failed to solve boss battle.';
         console.error(err);
       } finally {
         this.isLoading = false;
       }
-    }
+    },
+    async loadMazeFromFile(file) {
+      this.isLoading = true;
+      this.error = null;
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+
+          // Basic validation
+          if (!data.maze || !data.B || !data.PlayerSkills || !data.C || !data.L) {
+            throw new Error("Invalid or incomplete JSON file format.");
+          }
+
+          // Reset state
+          this.dpPath = null;
+          this.greedyPath = null;
+          this.uniquePath = null;
+          this.playerPath = [];
+          this.playerScore = 0;
+          this.gameWon = false;
+          this.activePuzzle = null;
+          this.bossBattleResult = null;
+
+          // Load data from JSON
+          this.mazeData = data.maze;
+          this.bossHps = data.B;
+          this.playerSkills = data.PlayerSkills.map((skill, index) => ({
+            name: `Skill ${index + 1}`,
+            damage: skill[0],
+            cooldown: skill[1],
+          }));
+
+          // Find puzzle and player start position
+          const puzzles = {};
+          let startPos = null;
+          for (let r = 0; r < data.maze.length; r++) {
+            for (let c = 0; c < data.maze[r].length; c++) {
+              if (data.maze[r][c] === 'L') {
+                const key = `${r},${c}`;
+                puzzles[key] = {
+                  id: `puzzle_${r}_${c}`,
+                  constraints: data.C,
+                  password_hash: data.L,
+                };
+              }
+              if (data.maze[r][c] === 'S') {
+                startPos = { r, c };
+              }
+            }
+          }
+          this.leverPuzzles = puzzles;
+
+          if (startPos) {
+            this.playerPosition = startPos;
+            this.playerPath.push([startPos.r, startPos.c]);
+          } else {
+            throw new Error("No start position 'S' found in the maze.");
+          }
+
+          this.isGameActive = true;
+        } catch (err) {
+          this.error = `Failed to load file: ${err.message}`;
+          console.error(err);
+          this.isGameActive = false;
+        } finally {
+          this.isLoading = false;
+        }
+      };
+
+      reader.onerror = (err) => {
+        this.error = 'Failed to read file.';
+        console.error(err);
+        this.isLoading = false;
+      };
+
+      reader.readAsText(file);
+    },
   },
 });

@@ -2,6 +2,10 @@
   <div class="maze-grid-container">
     <div v-if="!maze" class="placeholder">Generate a maze to begin</div>
     <div v-else class="maze-grid" :style="gridStyle">
+      <!-- Player Marker -->
+      <div v-if="playerPosition" class="player-marker" :style="playerStyle"></div>
+
+      <!-- Maze Cells -->
       <template v-for="(row, y) in maze" :key="y">
         <div
           v-for="(cell, x) in row"
@@ -41,6 +45,15 @@ const props = defineProps({
 const gridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${props.maze?.[0]?.length || 10}, 30px)`,
 }));
+
+const playerStyle = computed(() => {
+  if (!props.playerPosition) return {};
+  const { r, c } = props.playerPosition;
+  return {
+    top: `${r * 30}px`,
+    left: `${c * 30}px`,
+  };
+});
 
 const animatedDpPath = ref([]);
 const animatedGreedyPath = ref([]);
@@ -87,10 +100,8 @@ const isPath = (path, x, y) => {
 const getCellClass = (cell, x, y) => {
   const onDpPath = isPath(animatedDpPath.value, x, y);
   const onGreedyPath = isPath(animatedGreedyPath.value, x, y);
-  const isPlayer = props.playerPosition && props.playerPosition.r === y && props.playerPosition.c === x;
 
   return {
-    player: isPlayer,
     wall: cell === '#',
     path: cell === '.',
     start: cell === 'S',
@@ -138,6 +149,7 @@ const getCellContent = (cell) => {
 }
 
 .maze-grid {
+  position: relative;
   display: grid;
   border: 1px solid #ccc;
 }
@@ -166,9 +178,15 @@ const getCellContent = (cell) => {
 .path-greedy { background-color: rgba(30, 144, 255, 0.5); } /* DodgerBlue */
 .path-common { background-color: rgba(124, 252, 0, 0.6); } /* LawnGreen */
 
-.player {
-  background-color: #007bff;
+.player-marker {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  background: radial-gradient(circle at 7px 7px, #ffaf7b, #d76d77, #3a1c71);
   border-radius: 50%;
-  box-shadow: 0 0 8px #007bff;
+  box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+  margin: 2px; /* Center it within the 30x30 cell */
+  transition: top 0.2s ease-in-out, left 0.2s ease-in-out;
+  z-index: 10;
 }
 </style>

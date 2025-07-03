@@ -8,6 +8,7 @@
       v-model="mazeSize"
       :loading="game.isLoading"
       @startGame="handleGenerateMaze"
+      @loadFile="handleLoadFile"
     />
 
     <!-- Main Game Content -->
@@ -114,6 +115,10 @@ const game = useGameStore();
 
 const handleGenerateMaze = () => {
   game.generateMaze(mazeSize.value);
+};
+
+const handleLoadFile = (file) => {
+  game.loadMazeFromFile(file);
 };
 
 const handleKeyDown = (e) => {

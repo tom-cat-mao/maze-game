@@ -3,7 +3,7 @@ from collections import deque
 import json
 
 # --- Constants ---
-SCORE_MAP = {'G': 10, 'T': -5, 'S': 0, 'E': 0, '.': 0, 'B':0, 'L':0}
+SCORE_MAP = {'G': 50, 'T': -30, 'S': 0, 'E': 0, '.': 0, 'B':0, 'L':0}
 MOVE_COST = 0 # As per user request, movement has no cost.
 
 # --- Logging Setup ---

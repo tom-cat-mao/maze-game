@@ -15,17 +15,48 @@
     </div>
     <button @click="$emit('startGame')" class="start-game-btn">
       <span v-if="loading">Loading...</span>
-      <span v-else>Start Game</span>
+      <span v-else>Generate New Maze</span>
     </button>
+
+    <div class="divider">OR</div>
+
+    <div class="file-load-area">
+      <p>Load a level from a JSON file.</p>
+      <div class="file-input-wrapper">
+        <input type="file" id="file-upload" @change="onFileChange" accept=".json" class="file-input-hidden" />
+        <label for="file-upload" class="file-upload-label">Browse...</label>
+        <span v-if="selectedFile" class="file-name">{{ selectedFile.name }}</span>
+        <button @click="handleLoadFile" :disabled="!selectedFile || loading" class="load-file-btn">
+          Load from File
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
+
 defineProps({
   modelValue: Number,
   loading: Boolean,
 });
-defineEmits(['update:modelValue', 'startGame']);
+const emit = defineEmits(['update:modelValue', 'startGame', 'loadFile']);
+
+const selectedFile = ref(null);
+
+const onFileChange = (e) => {
+  const files = e.target.files;
+  if (files.length > 0) {
+    selectedFile.value = files[0];
+  }
+};
+
+const handleLoadFile = () => {
+  if (selectedFile.value) {
+    emit('loadFile', selectedFile.value);
+  }
+};
 </script>
 
 <style scoped>
@@ -63,5 +94,76 @@ defineEmits(['update:modelValue', 'startGame']);
 
 .start-game-btn:hover {
   background-color: #218838;
+}
+
+.divider {
+  margin: 20px 0;
+  font-weight: bold;
+  color: #666;
+}
+
+.file-load-area {
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+.file-load-area p {
+  margin-bottom: 10px;
+}
+
+.file-input-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.file-upload-label {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  white-space: nowrap;
+}
+
+.file-upload-label:hover {
+  background-color: #0056b3;
+}
+
+.file-name {
+  font-style: italic;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.load-file-btn {
+  background-color: #007bff;
+  padding: 10px 15px;
+  border: none;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  white-space: nowrap;
+}
+
+.load-file-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 </style>
